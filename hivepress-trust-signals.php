@@ -2,12 +2,15 @@
 /**
  * Plugin Name: Trust Signals for HivePress
  * Description: Surfaces verifiable trust and activity data (response time, completed bookings, reviews, favourites and more) in a sidebar block on HivePress listing and vendor pages.
- * Version: 1.7.0
+ * Version: 1.7.1
  * Author: ChrisB @ HivePress Community
  * Author URI: https://community.hivepress.io/u/chrisb
+ * Requires at least: 6.0
+ * Requires PHP: 7.4
  * Requires Plugins: hivepress
  * License: GPLv2 or later
  * Text Domain: hivepress-trust-signals
+ * Domain Path: /languages
  *
  * @package HivePress\Trust_Signals
  *
@@ -29,23 +32,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HPTS_VERSION', '1.7.0' );
-
-// Register this plugin directory with HivePress so core autoloads our classes
-// (includes/fields/class-color.php) - the official third-party extension
-// pattern via the hivepress/v1/extensions filter (verified in core).
-add_filter(
-	'hivepress/v1/extensions',
-	/**
-	 * @param array<int, string> $extensions Extension directories.
-	 * @return array<int, string>
-	 */
-	function ( $extensions ) {
-		$extensions[] = __DIR__;
-
-		return $extensions;
-	}
-);
+define( 'HPTS_VERSION', '1.7.1' );
 define( 'HPTS_CACHE_TTL', 12 * HOUR_IN_SECONDS );
 define( 'HPTS_MSG_ROW_LIMIT', 20000 );
 
@@ -149,7 +136,8 @@ function hpts_maybe_upgrade() {
 		}
 	}
 
-	update_option( 'hpts_version', HPTS_VERSION, false );
+	// Autoloaded: read on every request.
+	update_option( 'hpts_version', HPTS_VERSION, true );
 }
 
 /**
@@ -290,7 +278,7 @@ function hpts_register_settings( $settings ) {
 
 					'trust_signals_color_icon'      => [
 						'label'       => __( 'Icon colour', 'hivepress-trust-signals' ),
-						'description' => __( 'Colours use the HivePress grey palette by default. Click a swatch to change it or use the reset link to restore the default.', 'hivepress-trust-signals' ),
+						'description' => __( 'Colours use the HivePress grey palette by default. Click a swatch to change it or use the Default button to restore it.', 'hivepress-trust-signals' ),
 						'type'        => $color_type,
 						'default'     => '#b5becf',
 						'attributes'  => [ 'data-default-color' => '#b5becf' ],
@@ -1313,8 +1301,7 @@ function hpts_compute_response_stats( $vendor_user_id ) {
 		)
 	);
 
-	$rows = array_reverse( $rows );
-
+	// get_results() returns null (not an array) if the query fails.
 	if ( ! $rows ) {
 		return [
 			'median'  => null,
@@ -1322,6 +1309,8 @@ function hpts_compute_response_stats( $vendor_user_id ) {
 			'samples' => 0,
 		];
 	}
+
+	$rows = array_reverse( $rows );
 
 	$threads = [];
 
