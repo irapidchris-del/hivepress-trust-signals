@@ -2,7 +2,7 @@
 Contributors: chrisb
 Tags: hivepress, marketplace, trust, reviews, bookings
 Requires at least: 6.0
-Tested up to: 6.8
+Tested up to: 7.0
 Requires PHP: 7.4
 Stable tag: 1.7.0
 License: GPLv2 or later
@@ -16,7 +16,9 @@ Adds a configurable "Trust & activity" block to HivePress listing and vendor sid
 
 Signals hide automatically when the relevant extension is inactive or there is not enough data - the block omits rather than estimates. Site admins see an HTML comment in the page source explaining exactly why any enabled signal is hidden.
 
-Configure under HivePress > Settings > Trust Signals: display locations, list-row or pill-chip style, card styling (border and shadow), optional Font Awesome icons, custom colours, enabled signals, and the minimum conversation sample for response stats.
+Configure under HivePress > Settings > Trust Signals: display locations, list-row or pill-chip style, card styling (border and shadow), optional Font Awesome icons, custom colours, enabled signals, and the response-statistics thresholds (grace period, minimum rate to display, slowest response time to display, and minimum conversation sample).
+
+All data stays in your WordPress database - nothing is sent externally. The optional last-active signal stores a single timestamp per user (updated on login, on sending a message, and at most hourly while browsing logged in); the plugin also keeps a per-vendor completed-bookings counter and short-lived cached statistics. Deleting the plugin removes all of this data.
 
 Translation-ready: all strings use the hivepress-trust-signals text domain, with a POT template in /languages for Loco Translate or Poedit.
 
@@ -24,6 +26,12 @@ Translation-ready: all strings use the hivepress-trust-signals text domain, with
 
 = 1.7.0 =
 * Changed: the reply-speed wording now scales truthfully with the vendor's actual median - within an hour, a few hours, a day, a few days, a week, two weeks, or a month. The "Slowest response time to display" setting now only controls whether the signal is shown at all, so whatever is displayed always reads true at any cap.
+* Improved: the completed-bookings counter is now updated as soon as a booking completes instead of on the next page view, so short booking storage periods can no longer delete a booking before it is counted (verified against the Bookings extension source).
+* Fixed: uninstall now also removes the three response-statistics settings added in 1.6.0 (grace period, minimum rate, slowest response time to display).
+* Fixed: removed a leftover extension-directory registration that referenced the Color field class deleted in 1.5.3.
+* Fixed: the response-statistics query can no longer cause a PHP 8 fatal error in the rare case the database query fails.
+* Changed: plugin headers now declare Requires at least, Requires PHP and Domain Path, and the version option is autoloaded (one less database query per page load).
+* Changed: refreshed the translation template (correct file references and UTF-8 charset) and clarified the colour-picker setting description.
 
 
 = 1.6.1 =

@@ -23,6 +23,9 @@ $hpts_options = [
 	'hp_trust_signals_color_pill_text',
 	'hp_trust_signals_schema',
 	'hp_trust_signals_items',
+	'hp_trust_signals_grace_hours',
+	'hp_trust_signals_rate_min',
+	'hp_trust_signals_response_max_days',
 	'hp_trust_signals_min_samples',
 	'hpts_version',
 ];

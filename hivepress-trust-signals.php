@@ -5,9 +5,12 @@
  * Version: 1.7.0
  * Author: ChrisB @ HivePress Community
  * Author URI: https://community.hivepress.io/u/chrisb
+ * Requires at least: 6.0
+ * Requires PHP: 7.4
  * Requires Plugins: hivepress
  * License: GPLv2 or later
  * Text Domain: hivepress-trust-signals
+ * Domain Path: /languages
  *
  * @package HivePress\Trust_Signals
  *
@@ -20,7 +23,7 @@
  * - Listings:  post type 'hp_listing'; vendor relation = post_parent.
  * - Vendors:   post type 'hp_vendor'; user relation = post_author.
  * - Verified:  post meta 'hp_verified' on listings and vendors (core field).
- * - Bookings (premium, verified from source July 2026): post type 'hp_booking';
+ * - Bookings (premium, verified against Bookings 1.5.5 source): post type 'hp_booking';
  *   listing = post_parent, client = post_author, hp_start_time/hp_end_time are
  *   unix-timestamp meta; statuses: publish=Confirmed, draft=Unpaid, pending=Pending,
  *   trash=Canceled. A monotonic vendor-meta counter protects the completed count
@@ -30,22 +33,6 @@
 defined( 'ABSPATH' ) || exit;
 
 define( 'HPTS_VERSION', '1.7.0' );
-
-// Register this plugin directory with HivePress so core autoloads our classes
-// (includes/fields/class-color.php) - the official third-party extension
-// pattern via the hivepress/v1/extensions filter (verified in core).
-add_filter(
-	'hivepress/v1/extensions',
-	/**
-	 * @param array<int, string> $extensions Extension directories.
-	 * @return array<int, string>
-	 */
-	function ( $extensions ) {
-		$extensions[] = __DIR__;
-
-		return $extensions;
-	}
-);
 define( 'HPTS_CACHE_TTL', 12 * HOUR_IN_SECONDS );
 define( 'HPTS_MSG_ROW_LIMIT', 20000 );
 
@@ -149,7 +136,8 @@ function hpts_maybe_upgrade() {
 		}
 	}
 
-	update_option( 'hpts_version', HPTS_VERSION, false );
+	// Autoloaded: read on every request.
+	update_option( 'hpts_version', HPTS_VERSION, true );
 }
 
 /**
@@ -290,7 +278,7 @@ function hpts_register_settings( $settings ) {
 
 					'trust_signals_color_icon'      => [
 						'label'       => __( 'Icon colour', 'hivepress-trust-signals' ),
-						'description' => __( 'Colours use the HivePress grey palette by default. Click a swatch to change it or use the reset link to restore the default.', 'hivepress-trust-signals' ),
+						'description' => __( 'Colours use the HivePress grey palette by default. Click a swatch to change it or use the Default button to restore it.', 'hivepress-trust-signals' ),
 						'type'        => $color_type,
 						'default'     => '#b5becf',
 						'attributes'  => [ 'data-default-color' => '#b5becf' ],
@@ -1313,8 +1301,7 @@ function hpts_compute_response_stats( $vendor_user_id ) {
 		)
 	);
 
-	$rows = array_reverse( $rows );
-
+	// get_results() returns null (not an array) if the query fails.
 	if ( ! $rows ) {
 		return [
 			'median'  => null,
@@ -1322,6 +1309,8 @@ function hpts_compute_response_stats( $vendor_user_id ) {
 			'samples' => 0,
 		];
 	}
+
+	$rows = array_reverse( $rows );
 
 	$threads = [];
 
@@ -1493,6 +1482,12 @@ function hpts_on_booking_complete( $booking_id ) {
 
 		if ( $listing && $listing->post_parent ) {
 			hpts_flush_vendor_stats( (int) $listing->post_parent );
+
+			// Bump the monotonic counter now rather than on the next page
+			// view: with a 1-day booking storage period the deletion cron
+			// could otherwise remove this booking before it is ever counted
+			// (this hook fires 12h after the end time, deletion 24h+ after).
+			hpts_count_completed_bookings( (int) $listing->post_parent );
 		}
 	}
 }
