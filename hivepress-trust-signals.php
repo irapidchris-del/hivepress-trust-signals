@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Trust Signals for HivePress
  * Description: Surfaces verifiable trust and activity data (response time, completed bookings, reviews, favourites and more) in a sidebar block on HivePress listing and vendor pages.
- * Version: 1.7.1
+ * Version: 1.7.0
  * Author: ChrisB @ HivePress Community
  * Author URI: https://community.hivepress.io/u/chrisb
  * Requires at least: 6.0
@@ -23,7 +23,7 @@
  * - Listings:  post type 'hp_listing'; vendor relation = post_parent.
  * - Vendors:   post type 'hp_vendor'; user relation = post_author.
  * - Verified:  post meta 'hp_verified' on listings and vendors (core field).
- * - Bookings (premium, verified from source July 2026): post type 'hp_booking';
+ * - Bookings (premium, verified against Bookings 1.5.5 source): post type 'hp_booking';
  *   listing = post_parent, client = post_author, hp_start_time/hp_end_time are
  *   unix-timestamp meta; statuses: publish=Confirmed, draft=Unpaid, pending=Pending,
  *   trash=Canceled. A monotonic vendor-meta counter protects the completed count
@@ -32,7 +32,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HPTS_VERSION', '1.7.1' );
+define( 'HPTS_VERSION', '1.7.0' );
 define( 'HPTS_CACHE_TTL', 12 * HOUR_IN_SECONDS );
 define( 'HPTS_MSG_ROW_LIMIT', 20000 );
 
@@ -1482,6 +1482,12 @@ function hpts_on_booking_complete( $booking_id ) {
 
 		if ( $listing && $listing->post_parent ) {
 			hpts_flush_vendor_stats( (int) $listing->post_parent );
+
+			// Bump the monotonic counter now rather than on the next page
+			// view: with a 1-day booking storage period the deletion cron
+			// could otherwise remove this booking before it is ever counted
+			// (this hook fires 12h after the end time, deletion 24h+ after).
+			hpts_count_completed_bookings( (int) $listing->post_parent );
 		}
 	}
 }
