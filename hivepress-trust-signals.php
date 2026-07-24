@@ -218,7 +218,7 @@ function hpts_register_settings( $settings ) {
 					'trust_signals_title'           => [
 						'label'      => __( 'Block title', 'hivepress-trust-signals' ),
 						'type'       => 'text',
-						'default'    => __( 'Trust & activity', 'hivepress-trust-signals' ),
+						'default'    => __( 'Overview', 'hivepress-trust-signals' ),
 						'max_length' => 64,
 						'_order'     => 10,
 					],
@@ -233,6 +233,16 @@ function hpts_register_settings( $settings ) {
 							'listing_page' => __( 'Listing pages (sidebar)', 'hivepress-trust-signals' ),
 							'vendor_page'  => __( 'Vendor profile pages (sidebar)', 'hivepress-trust-signals' ),
 						],
+					],
+
+					'trust_signals_order'           => [
+						'label'       => __( 'Sidebar order', 'hivepress-trust-signals' ),
+						'description' => __( 'Sets where the block appears among the other sidebar elements. A lower number places it higher on the page; a higher number places it lower down. Default: 35.', 'hivepress-trust-signals' ),
+						'type'        => 'number',
+						'min_value'   => 1,
+						'max_value'   => 100,
+						'default'     => 35,
+						'_order'      => 25,
 					],
 
 					'trust_signals_style'           => [
@@ -427,6 +437,17 @@ function hpts_locations() {
 }
 
 /**
+ * Gets the admin-configured sidebar position for the block, shared by both
+ * page types. Lower numbers render higher in the sidebar. Clamped to a minimum
+ * of 1 so the block can never be forced above the sidebar's own root.
+ *
+ * @return int
+ */
+function hpts_sidebar_order() {
+	return max( 1, (int) hpts_get_option( 'trust_signals_order', 35 ) );
+}
+
+/**
  * Gets the trust signals block arguments.
  *
  * @param int $order Block order.
@@ -453,16 +474,17 @@ function hpts_inject_listing_block( $template ) {
 		return $template;
 	}
 
-	// Sidebar order on listing pages: attributes (10), actions (20), vendor card (30).
-	// 35 places trust signals directly beneath the vendor card, where they read as
-	// credentials for the person you are about to book.
+	// Sidebar position is admin-configurable (Trust Signals settings). The default
+	// of 35 places the block directly beneath the vendor card on listing pages
+	// (attributes 10, actions 20, vendor card 30), where it reads as credentials
+	// for the person you are about to book.
 	return hivepress()->helper->merge_trees(
 		$template,
 		[
 			'blocks' => [
 				'page_sidebar' => [
 					'blocks' => [
-						'trust_signals' => hpts_block_args( 35 ),
+						'trust_signals' => hpts_block_args( hpts_sidebar_order() ),
 					],
 				],
 			],
@@ -481,14 +503,16 @@ function hpts_inject_vendor_block( $template ) {
 		return $template;
 	}
 
-	// Vendor sidebar: summary container is order 10; 15 slots us straight after it.
+	// Vendor sidebar (summary 10, attributes 20, actions 30). Uses the same
+	// admin-configurable position as listing pages; the default of 35 sits just
+	// below the vendor's actions, above any sidebar widgets.
 	return hivepress()->helper->merge_trees(
 		$template,
 		[
 			'blocks' => [
 				'page_sidebar' => [
 					'blocks' => [
-						'trust_signals' => hpts_block_args( 15 ),
+						'trust_signals' => hpts_block_args( hpts_sidebar_order() ),
 					],
 				],
 			],
@@ -530,7 +554,7 @@ function hpts_render_block() {
 		return $debug;
 	}
 
-	$title  = hpts_get_option( 'trust_signals_title', __( 'Trust & activity', 'hivepress-trust-signals' ) );
+	$title  = hpts_get_option( 'trust_signals_title', __( 'Overview', 'hivepress-trust-signals' ) );
 	$style  = 'pills' === hpts_get_option( 'trust_signals_style', 'rows' ) ? 'pills' : 'rows';
 	$layout = 'inline' === hpts_get_option( 'trust_signals_pill_layout', 'stacked' ) ? 'inline' : 'stacked';
 	$icons  = (bool) hpts_get_option( 'trust_signals_icons', false );

@@ -12,11 +12,11 @@ Surfaces verifiable trust and activity data in a sidebar block on HivePress list
 
 == Description ==
 
-Adds a configurable "Trust & activity" block to HivePress listing and vendor sidebars, built entirely from data HivePress already stores: verified badge, member since, active listings, rating and review count, favourites, completed bookings, typical response time, response rate, and last active.
+Adds a configurable "Overview" block to HivePress listing and vendor sidebars, built entirely from data HivePress already stores: verified badge, member since, active listings, rating and review count, favourites, completed bookings, typical response time, response rate, and last active.
 
 Signals hide automatically when the relevant extension is inactive or there is not enough data - the block omits rather than estimates. Site admins see an HTML comment in the page source explaining exactly why any enabled signal is hidden.
 
-Configure under HivePress > Settings > Trust Signals: display locations, list-row or pill-chip style, card styling (border and shadow), optional Font Awesome icons, custom colours, enabled signals, and the response-statistics thresholds (grace period, minimum rate to display, slowest response time to display, and minimum conversation sample).
+Configure under HivePress > Settings > Trust Signals: display locations, the block's position in the sidebar, list-row or pill-chip style, card styling (border and shadow), optional Font Awesome icons, custom colours, enabled signals, and the response-statistics thresholds (grace period, minimum rate to display, slowest response time to display, and minimum conversation sample).
 
 All data stays in your WordPress database - nothing is sent externally. The optional last-active signal stores a single timestamp per user (updated on login, on sending a message, and at most hourly while browsing logged in); the plugin also keeps a per-vendor completed-bookings counter and short-lived cached statistics. Deleting the plugin removes all of this data.
 
@@ -25,6 +25,8 @@ Translation-ready: all strings use the hivepress-trust-signals text domain, with
 == Changelog ==
 
 = 1.7.0 =
+* Added: a "Sidebar order" setting to control where the block appears in the sidebar - a lower number places it higher on the page, a higher number lower down (default 35, applied to both listing and vendor pages).
+* Changed: the default block title is now "Overview" (existing sites keep whatever title they have already saved).
 * Changed: the reply-speed wording now scales truthfully with the vendor's actual median - within an hour, a few hours, a day, a few days, a week, two weeks, or a month. The "Slowest response time to display" setting now only controls whether the signal is shown at all, so whatever is displayed always reads true at any cap.
 * Improved: the completed-bookings counter is now updated as soon as a booking completes instead of on the next page view, so short booking storage periods can no longer delete a booking before it is counted (verified against the Bookings extension source).
 * Fixed: in the list-rows style, a custom icon colour now renders at full strength - the muted row-label text no longer fades the icon along with it (pill chips were already correct).

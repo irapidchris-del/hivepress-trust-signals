@@ -14,6 +14,7 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 $hpts_options = [
 	'hp_trust_signals_title',
 	'hp_trust_signals_locations',
+	'hp_trust_signals_order',
 	'hp_trust_signals_style',
 	'hp_trust_signals_pill_layout',
 	'hp_trust_signals_icons',
