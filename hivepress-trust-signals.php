@@ -5,9 +5,12 @@
  * Version: 1.7.0
  * Author: ChrisB @ HivePress Community
  * Author URI: https://community.hivepress.io/u/chrisb
+ * Requires at least: 6.0
+ * Requires PHP: 7.4
  * Requires Plugins: hivepress
  * License: GPLv2 or later
  * Text Domain: hivepress-trust-signals
+ * Domain Path: /languages
  *
  * @package HivePress\Trust_Signals
  *
@@ -20,7 +23,7 @@
  * - Listings:  post type 'hp_listing'; vendor relation = post_parent.
  * - Vendors:   post type 'hp_vendor'; user relation = post_author.
  * - Verified:  post meta 'hp_verified' on listings and vendors (core field).
- * - Bookings (premium, verified from source July 2026): post type 'hp_booking';
+ * - Bookings (premium, verified against Bookings 1.5.5 source): post type 'hp_booking';
  *   listing = post_parent, client = post_author, hp_start_time/hp_end_time are
  *   unix-timestamp meta; statuses: publish=Confirmed, draft=Unpaid, pending=Pending,
  *   trash=Canceled. A monotonic vendor-meta counter protects the completed count
@@ -30,22 +33,6 @@
 defined( 'ABSPATH' ) || exit;
 
 define( 'HPTS_VERSION', '1.7.0' );
-
-// Register this plugin directory with HivePress so core autoloads our classes
-// (includes/fields/class-color.php) - the official third-party extension
-// pattern via the hivepress/v1/extensions filter (verified in core).
-add_filter(
-	'hivepress/v1/extensions',
-	/**
-	 * @param array<int, string> $extensions Extension directories.
-	 * @return array<int, string>
-	 */
-	function ( $extensions ) {
-		$extensions[] = __DIR__;
-
-		return $extensions;
-	}
-);
 define( 'HPTS_CACHE_TTL', 12 * HOUR_IN_SECONDS );
 define( 'HPTS_MSG_ROW_LIMIT', 20000 );
 
@@ -149,7 +136,8 @@ function hpts_maybe_upgrade() {
 		}
 	}
 
-	update_option( 'hpts_version', HPTS_VERSION, false );
+	// Autoloaded: read on every request.
+	update_option( 'hpts_version', HPTS_VERSION, true );
 }
 
 /**
@@ -230,7 +218,7 @@ function hpts_register_settings( $settings ) {
 					'trust_signals_title'           => [
 						'label'      => __( 'Block title', 'hivepress-trust-signals' ),
 						'type'       => 'text',
-						'default'    => __( 'Trust & activity', 'hivepress-trust-signals' ),
+						'default'    => __( 'Overview', 'hivepress-trust-signals' ),
 						'max_length' => 64,
 						'_order'     => 10,
 					],
@@ -245,6 +233,16 @@ function hpts_register_settings( $settings ) {
 							'listing_page' => __( 'Listing pages (sidebar)', 'hivepress-trust-signals' ),
 							'vendor_page'  => __( 'Vendor profile pages (sidebar)', 'hivepress-trust-signals' ),
 						],
+					],
+
+					'trust_signals_order'           => [
+						'label'       => __( 'Sidebar order', 'hivepress-trust-signals' ),
+						'description' => __( 'Sets where the block appears among the other sidebar elements. A lower number places it higher on the page; a higher number places it lower down. Default: 35.', 'hivepress-trust-signals' ),
+						'type'        => 'number',
+						'min_value'   => 1,
+						'max_value'   => 100,
+						'default'     => 35,
+						'_order'      => 25,
 					],
 
 					'trust_signals_style'           => [
@@ -290,7 +288,7 @@ function hpts_register_settings( $settings ) {
 
 					'trust_signals_color_icon'      => [
 						'label'       => __( 'Icon colour', 'hivepress-trust-signals' ),
-						'description' => __( 'Colours use the HivePress grey palette by default. Click a swatch to change it or use the reset link to restore the default.', 'hivepress-trust-signals' ),
+						'description' => __( 'Colours use the HivePress grey palette by default. Click a swatch to change it or use the Default button to restore it.', 'hivepress-trust-signals' ),
 						'type'        => $color_type,
 						'default'     => '#b5becf',
 						'attributes'  => [ 'data-default-color' => '#b5becf' ],
@@ -439,6 +437,17 @@ function hpts_locations() {
 }
 
 /**
+ * Gets the admin-configured sidebar position for the block, shared by both
+ * page types. Lower numbers render higher in the sidebar. Clamped to a minimum
+ * of 1 so the block can never be forced above the sidebar's own root.
+ *
+ * @return int
+ */
+function hpts_sidebar_order() {
+	return max( 1, (int) hpts_get_option( 'trust_signals_order', 35 ) );
+}
+
+/**
  * Gets the trust signals block arguments.
  *
  * @param int $order Block order.
@@ -465,16 +474,17 @@ function hpts_inject_listing_block( $template ) {
 		return $template;
 	}
 
-	// Sidebar order on listing pages: attributes (10), actions (20), vendor card (30).
-	// 35 places trust signals directly beneath the vendor card, where they read as
-	// credentials for the person you are about to book.
+	// Sidebar position is admin-configurable (Trust Signals settings). The default
+	// of 35 places the block directly beneath the vendor card on listing pages
+	// (attributes 10, actions 20, vendor card 30), where it reads as credentials
+	// for the person you are about to book.
 	return hivepress()->helper->merge_trees(
 		$template,
 		[
 			'blocks' => [
 				'page_sidebar' => [
 					'blocks' => [
-						'trust_signals' => hpts_block_args( 35 ),
+						'trust_signals' => hpts_block_args( hpts_sidebar_order() ),
 					],
 				],
 			],
@@ -493,14 +503,16 @@ function hpts_inject_vendor_block( $template ) {
 		return $template;
 	}
 
-	// Vendor sidebar: summary container is order 10; 15 slots us straight after it.
+	// Vendor sidebar (summary 10, attributes 20, actions 30). Uses the same
+	// admin-configurable position as listing pages; the default of 35 sits just
+	// below the vendor's actions, above any sidebar widgets.
 	return hivepress()->helper->merge_trees(
 		$template,
 		[
 			'blocks' => [
 				'page_sidebar' => [
 					'blocks' => [
-						'trust_signals' => hpts_block_args( 15 ),
+						'trust_signals' => hpts_block_args( hpts_sidebar_order() ),
 					],
 				],
 			],
@@ -542,7 +554,7 @@ function hpts_render_block() {
 		return $debug;
 	}
 
-	$title  = hpts_get_option( 'trust_signals_title', __( 'Trust & activity', 'hivepress-trust-signals' ) );
+	$title  = hpts_get_option( 'trust_signals_title', __( 'Overview', 'hivepress-trust-signals' ) );
 	$style  = 'pills' === hpts_get_option( 'trust_signals_style', 'rows' ) ? 'pills' : 'rows';
 	$layout = 'inline' === hpts_get_option( 'trust_signals_pill_layout', 'stacked' ) ? 'inline' : 'stacked';
 	$icons  = (bool) hpts_get_option( 'trust_signals_icons', false );
@@ -585,7 +597,10 @@ function hpts_render_block() {
 		if ( 'pills' === $style ) {
 			$output .= $icon . '<span class="hpts-item__text">' . esc_html( $signal['pill'] ) . '</span>';
 		} else {
-			$output .= '<span class="hpts-item__label">' . $icon . esc_html( $signal['label'] ) . '</span>';
+			// The label text is wrapped separately so its muted opacity does not
+			// fade the icon, which carries the admin-chosen icon colour (CSS
+			// opacity on a parent cannot be overridden by a child).
+			$output .= '<span class="hpts-item__label">' . $icon . '<span class="hpts-item__label-text">' . esc_html( $signal['label'] ) . '</span></span>';
 			$output .= '<span class="hpts-item__value">' . esc_html( $signal['value'] ) . '</span>';
 		}
 
@@ -750,7 +765,7 @@ function hpts_inline_css() {
 		. '.hpts-block--rows .hpts-item{display:flex;justify-content:space-between;align-items:baseline;gap:.75rem;padding:.45rem 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:.9em}'
 		. '.hpts-block--rows .hpts-item:last-child{border-bottom:none;padding-bottom:0}'
 		. '.hpts-block--rows .hpts-item:first-child{padding-top:0}'
-		. '.hpts-block--rows .hpts-item__label{opacity:.7}'
+		. '.hpts-block--rows .hpts-item__label-text{opacity:.7}'
 		. '.hpts-block--rows .hpts-item__label .fas{margin-right:.45em}'
 		. '.hpts-block--rows .hpts-item__value{font-weight:600;text-align:right}'
 		// Pill style: uniform thickness via min-height and fixed line-height.
@@ -1313,8 +1328,7 @@ function hpts_compute_response_stats( $vendor_user_id ) {
 		)
 	);
 
-	$rows = array_reverse( $rows );
-
+	// get_results() returns null (not an array) if the query fails.
 	if ( ! $rows ) {
 		return [
 			'median'  => null,
@@ -1322,6 +1336,8 @@ function hpts_compute_response_stats( $vendor_user_id ) {
 			'samples' => 0,
 		];
 	}
+
+	$rows = array_reverse( $rows );
 
 	$threads = [];
 
@@ -1493,6 +1509,12 @@ function hpts_on_booking_complete( $booking_id ) {
 
 		if ( $listing && $listing->post_parent ) {
 			hpts_flush_vendor_stats( (int) $listing->post_parent );
+
+			// Bump the monotonic counter now rather than on the next page
+			// view: with a 1-day booking storage period the deletion cron
+			// could otherwise remove this booking before it is ever counted
+			// (this hook fires 12h after the end time, deletion 24h+ after).
+			hpts_count_completed_bookings( (int) $listing->post_parent );
 		}
 	}
 }
