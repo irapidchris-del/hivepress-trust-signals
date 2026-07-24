@@ -4,7 +4,7 @@ Tags: hivepress, marketplace, trust, reviews, bookings
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.7.0
+Stable tag: 1.7.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,13 +16,16 @@ Adds a configurable "Overview" block to HivePress listing and vendor sidebars, b
 
 Signals hide automatically when the relevant extension is inactive or there is not enough data - the block omits rather than estimates. Site admins see an HTML comment in the page source explaining exactly why any enabled signal is hidden.
 
-Configure under HivePress > Settings > Trust Signals: display locations, the block's position in the sidebar, list-row or pill-chip style, card styling (border and shadow), optional Font Awesome icons, custom colours, enabled signals, and the response-statistics thresholds (grace period, minimum rate to display, slowest response time to display, and minimum conversation sample).
+Configure under HivePress > Settings > Trust Signals: display locations, the block's sidebar position (set separately for listing and vendor pages), list-row or pill-chip style, card styling (border and shadow), optional Font Awesome icons, custom colours, enabled signals, and the response-statistics thresholds (grace period, minimum rate to display, slowest response time to display, and minimum conversation sample).
 
 All data stays in your WordPress database - nothing is sent externally. The optional last-active signal stores a single timestamp per user (updated on login, on sending a message, and at most hourly while browsing logged in); the plugin also keeps a per-vendor completed-bookings counter and short-lived cached statistics. Deleting the plugin removes all of this data.
 
 Translation-ready: all strings use the hivepress-trust-signals text domain, with a POT template in /languages for Loco Translate or Poedit.
 
 == Changelog ==
+
+= 1.7.1 =
+* Changed: the sidebar order is now set separately for listing pages and vendor pages (two settings instead of one), so the block can sit in a different position on each. Any value saved under the previous single setting is carried over to both on upgrade.
 
 = 1.7.0 =
 * Added: a "Sidebar order" setting to control where the block appears in the sidebar - a lower number places it higher on the page, a higher number lower down (default 35, applied to both listing and vendor pages).

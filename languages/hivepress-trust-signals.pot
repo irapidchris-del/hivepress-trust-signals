@@ -2,9 +2,9 @@
 # This file is distributed under the same license as the Trust Signals for HivePress plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Trust Signals for HivePress 1.7.0\n"
+"Project-Id-Version: Trust Signals for HivePress 1.7.1\n"
 "Report-Msgid-Bugs-To: https://community.hivepress.io\n"
-"POT-Creation-Date: 2026-07-24 12:52+0000\n"
+"POT-Creation-Date: 2026-07-24 13:11+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,222 +19,230 @@ msgstr ""
 msgid "Trust Signals for HivePress requires the HivePress plugin to be active."
 msgstr ""
 
-#: hivepress-trust-signals.php:175
+#: hivepress-trust-signals.php:192
 msgid "Verified badge"
 msgstr ""
 
-#: hivepress-trust-signals.php:176 hivepress-trust-signals.php:844
+#: hivepress-trust-signals.php:193 hivepress-trust-signals.php:872
 msgid "Member since"
 msgstr ""
 
-#: hivepress-trust-signals.php:177
+#: hivepress-trust-signals.php:194
 msgid "Active listings count"
 msgstr ""
 
-#: hivepress-trust-signals.php:178
+#: hivepress-trust-signals.php:195
 msgid "Rating & review count (requires Reviews)"
 msgstr ""
 
-#: hivepress-trust-signals.php:179
+#: hivepress-trust-signals.php:196
 msgid "Favourites count (requires Favorites)"
 msgstr ""
 
-#: hivepress-trust-signals.php:180
+#: hivepress-trust-signals.php:197
 msgid "Completed bookings (requires Bookings)"
 msgstr ""
 
-#: hivepress-trust-signals.php:181
+#: hivepress-trust-signals.php:198
 msgid "Typical response time (requires Messages)"
 msgstr ""
 
-#: hivepress-trust-signals.php:182
+#: hivepress-trust-signals.php:199
 msgid "Response rate (requires Messages)"
 msgstr ""
 
-#: hivepress-trust-signals.php:183
+#: hivepress-trust-signals.php:200
 msgid "Last active (tracked from plugin activation)"
 msgstr ""
 
-#: hivepress-trust-signals.php:209
+#: hivepress-trust-signals.php:226
 msgid "Trust Signals"
 msgstr ""
 
-#: hivepress-trust-signals.php:214
+#: hivepress-trust-signals.php:231
 msgid "Display"
 msgstr ""
 
-#: hivepress-trust-signals.php:219
+#: hivepress-trust-signals.php:236
 msgid "Block title"
 msgstr ""
 
-#: hivepress-trust-signals.php:221 hivepress-trust-signals.php:557
+#: hivepress-trust-signals.php:238 hivepress-trust-signals.php:585
 msgid "Overview"
 msgstr ""
 
-#: hivepress-trust-signals.php:227
+#: hivepress-trust-signals.php:244
 msgid "Show on"
 msgstr ""
 
-#: hivepress-trust-signals.php:233
+#: hivepress-trust-signals.php:250
 msgid "Listing pages (sidebar)"
 msgstr ""
 
-#: hivepress-trust-signals.php:234
+#: hivepress-trust-signals.php:251
 msgid "Vendor profile pages (sidebar)"
 msgstr ""
 
-#: hivepress-trust-signals.php:239
-msgid "Sidebar order"
-msgstr ""
-
-#: hivepress-trust-signals.php:240
-msgid "Sets where the block appears among the other sidebar elements. A lower number places it higher on the page; a higher number places it lower down. Default: 35."
-msgstr ""
-
-#: hivepress-trust-signals.php:249
-msgid "Display style"
-msgstr ""
-
-#: hivepress-trust-signals.php:250
-msgid "Rows show one signal per line; pill chips show compact rounded labels."
-msgstr ""
-
 #: hivepress-trust-signals.php:256
-msgid "List rows (label and value)"
+msgid "Listing page sidebar order"
 msgstr ""
 
 #: hivepress-trust-signals.php:257
-msgid "Pill chips"
+msgid "Sets where the block appears among the other sidebar elements on listing pages. A lower number places it higher on the page; a higher number places it lower down. Default: 35."
 msgstr ""
 
-#: hivepress-trust-signals.php:262
-msgid "Pill layout"
+#: hivepress-trust-signals.php:266
+msgid "Vendor page sidebar order"
 msgstr ""
 
-#: hivepress-trust-signals.php:263
-msgid "Applies when the display style is pill chips."
-msgstr ""
-
-#: hivepress-trust-signals.php:269
-msgid "Stacked (one per line)"
-msgstr ""
-
-#: hivepress-trust-signals.php:270
-msgid "Inline (wrapped)"
-msgstr ""
-
-#: hivepress-trust-signals.php:275
-msgid "Show icons"
+#: hivepress-trust-signals.php:267
+msgid "Sets where the block appears among the other sidebar elements on vendor profile pages. A lower number places it higher on the page; a higher number places it lower down. Default: 35."
 msgstr ""
 
 #: hivepress-trust-signals.php:276
-msgid "Uses the Font Awesome 5 solid icons bundled with HivePress core. If your site subsets or replaces Font Awesome, make sure the required glyphs are included."
+msgid "Display style"
 msgstr ""
 
-#: hivepress-trust-signals.php:282
-msgid "Card style"
+#: hivepress-trust-signals.php:277
+msgid "Rows show one signal per line; pill chips show compact rounded labels."
 msgstr ""
 
 #: hivepress-trust-signals.php:283
-msgid "Add border, shadow and padding (matches HivePress theme sidebar widgets)"
+msgid "List rows (label and value)"
+msgstr ""
+
+#: hivepress-trust-signals.php:284
+msgid "Pill chips"
+msgstr ""
+
+#: hivepress-trust-signals.php:289
+msgid "Pill layout"
 msgstr ""
 
 #: hivepress-trust-signals.php:290
-msgid "Icon colour"
+msgid "Applies when the display style is pill chips."
 msgstr ""
 
-#: hivepress-trust-signals.php:291
-msgid "Colours use the HivePress grey palette by default. Click a swatch to change it or use the Default button to restore it."
+#: hivepress-trust-signals.php:296
+msgid "Stacked (one per line)"
 msgstr ""
 
-#: hivepress-trust-signals.php:299
-msgid "Pill background colour"
+#: hivepress-trust-signals.php:297
+msgid "Inline (wrapped)"
 msgstr ""
 
-#: hivepress-trust-signals.php:307
-msgid "Pill text colour"
+#: hivepress-trust-signals.php:302
+msgid "Show icons"
 msgstr ""
 
-#: hivepress-trust-signals.php:315
-msgid "Rating schema markup"
+#: hivepress-trust-signals.php:303
+msgid "Uses the Font Awesome 5 solid icons bundled with HivePress core. If your site subsets or replaces Font Awesome, make sure the required glyphs are included."
 msgstr ""
 
-#: hivepress-trust-signals.php:316
-msgid "Output LocalBusiness AggregateRating JSON-LD on vendor pages"
+#: hivepress-trust-signals.php:309
+msgid "Card style"
+msgstr ""
+
+#: hivepress-trust-signals.php:310
+msgid "Add border, shadow and padding (matches HivePress theme sidebar widgets)"
 msgstr ""
 
 #: hivepress-trust-signals.php:317
+msgid "Icon colour"
+msgstr ""
+
+#: hivepress-trust-signals.php:318
+msgid "Colours use the HivePress grey palette by default. Click a swatch to change it or use the Default button to restore it."
+msgstr ""
+
+#: hivepress-trust-signals.php:326
+msgid "Pill background colour"
+msgstr ""
+
+#: hivepress-trust-signals.php:334
+msgid "Pill text colour"
+msgstr ""
+
+#: hivepress-trust-signals.php:342
+msgid "Rating schema markup"
+msgstr ""
+
+#: hivepress-trust-signals.php:343
+msgid "Output LocalBusiness AggregateRating JSON-LD on vendor pages"
+msgstr ""
+
+#: hivepress-trust-signals.php:344
 msgid "Leave disabled if another plugin already outputs rating structured data for vendors - the HivePress SEO extension does this automatically - as duplicates can cause Search Console warnings."
 msgstr ""
 
-#: hivepress-trust-signals.php:325
+#: hivepress-trust-signals.php:352
 msgid "Signals"
 msgstr ""
 
-#: hivepress-trust-signals.php:330
+#: hivepress-trust-signals.php:357
 msgid "Enabled signals"
 msgstr ""
 
-#: hivepress-trust-signals.php:331
+#: hivepress-trust-signals.php:358
 msgid "Signals that depend on an extension are hidden automatically if that extension is inactive or there is not enough data. Response time and rate thresholds are configurable below. Signals are omitted rather than estimated."
 msgstr ""
 
-#: hivepress-trust-signals.php:339
+#: hivepress-trust-signals.php:366
 msgid "Response rate grace period (hours)"
 msgstr ""
 
-#: hivepress-trust-signals.php:340
+#: hivepress-trust-signals.php:367
 msgid "Conversations opened within this many hours are left out of the response rate, so a brand-new unanswered message does not lower a vendor's rate before they have had a fair chance to reply. Default: 48."
 msgstr ""
 
-#: hivepress-trust-signals.php:349
+#: hivepress-trust-signals.php:376
 msgid "Minimum response rate to display (%)"
 msgstr ""
 
-#: hivepress-trust-signals.php:350
+#: hivepress-trust-signals.php:377
 msgid "The response rate is only shown when it is at least this percentage, so a low rate is not advertised on the vendor's own page. Set to 0 to always show it. Default: 80."
 msgstr ""
 
-#: hivepress-trust-signals.php:359
+#: hivepress-trust-signals.php:386
 msgid "Slowest response time to display (days)"
 msgstr ""
 
-#: hivepress-trust-signals.php:360
+#: hivepress-trust-signals.php:387
 msgid "The response time signal is hidden entirely when a vendor's typical first reply is slower than this many days. The displayed wording always comes from the true value (within an hour, a day, a few days, a week, two weeks, a month), so whatever is shown reads true at any setting. Default: 3."
 msgstr ""
 
-#: hivepress-trust-signals.php:369
+#: hivepress-trust-signals.php:396
 msgid "Minimum conversations"
 msgstr ""
 
-#: hivepress-trust-signals.php:370
+#: hivepress-trust-signals.php:397
 msgid "Response time and rate are only shown once a vendor has received at least this many conversations."
 msgstr ""
 
-#: hivepress-trust-signals.php:417
+#: hivepress-trust-signals.php:444
 msgid "Settings"
 msgstr ""
 
-#: hivepress-trust-signals.php:826 hivepress-trust-signals.php:828
+#: hivepress-trust-signals.php:854 hivepress-trust-signals.php:856
 msgid "Verified"
 msgstr ""
 
-#: hivepress-trust-signals.php:827
+#: hivepress-trust-signals.php:855
 msgid "Yes"
 msgstr ""
 
 #. translators: %s: month and year.
-#: hivepress-trust-signals.php:848
+#: hivepress-trust-signals.php:876
 #, php-format
 msgid "Member since %s"
 msgstr ""
 
-#: hivepress-trust-signals.php:864
+#: hivepress-trust-signals.php:892
 msgid "Active listings"
 msgstr ""
 
 #. translators: %s: number of listings.
-#: hivepress-trust-signals.php:868
+#: hivepress-trust-signals.php:896
 #, php-format
 msgid "%s active listing"
 msgid_plural "%s active listings"
@@ -242,27 +250,27 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: average rating, 2: number of reviews.
-#: hivepress-trust-signals.php:889
+#: hivepress-trust-signals.php:917
 #, php-format
 msgid "%1$s / 5 (%2$s review)"
 msgid_plural "%1$s / 5 (%2$s reviews)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: hivepress-trust-signals.php:897
+#: hivepress-trust-signals.php:925
 msgid "Rating"
 msgstr ""
 
-#: hivepress-trust-signals.php:921
+#: hivepress-trust-signals.php:949
 msgid "Saved as favourite"
 msgstr ""
 
-#: hivepress-trust-signals.php:922
+#: hivepress-trust-signals.php:950
 msgid "Favourites received"
 msgstr ""
 
 #. translators: %s: number of users.
-#: hivepress-trust-signals.php:925
+#: hivepress-trust-signals.php:953
 #, php-format
 msgid "%s time"
 msgid_plural "%s times"
@@ -270,85 +278,85 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of users.
-#: hivepress-trust-signals.php:930
+#: hivepress-trust-signals.php:958
 #, php-format
 msgid "Favourited %s time"
 msgid_plural "Favourited %s times"
 msgstr[0] ""
 msgstr[1] ""
 
-#: hivepress-trust-signals.php:950
+#: hivepress-trust-signals.php:978
 msgid "Completed bookings"
 msgstr ""
 
 #. translators: %s: number of bookings.
-#: hivepress-trust-signals.php:954
+#: hivepress-trust-signals.php:982
 #, php-format
 msgid "%s completed booking"
 msgid_plural "%s completed bookings"
 msgstr[0] ""
 msgstr[1] ""
 
-#: hivepress-trust-signals.php:989
+#: hivepress-trust-signals.php:1017
 msgid "Typically replies"
 msgstr ""
 
 #. translators: %s: response time bucket, e.g. "within an hour".
-#: hivepress-trust-signals.php:993
+#: hivepress-trust-signals.php:1021
 #, php-format
 msgid "Replies %s"
 msgstr ""
 
-#: hivepress-trust-signals.php:1011
+#: hivepress-trust-signals.php:1039
 msgid "Response rate"
 msgstr ""
 
 #. translators: %s: percentage.
-#: hivepress-trust-signals.php:1015
+#: hivepress-trust-signals.php:1043
 #, php-format
 msgid "%s%% response rate"
 msgstr ""
 
-#: hivepress-trust-signals.php:1034
+#: hivepress-trust-signals.php:1062
 msgid "Active today"
 msgstr ""
 
-#: hivepress-trust-signals.php:1036
+#: hivepress-trust-signals.php:1064
 msgid "Active this week"
 msgstr ""
 
-#: hivepress-trust-signals.php:1038
+#: hivepress-trust-signals.php:1066
 msgid "Active this month"
 msgstr ""
 
-#: hivepress-trust-signals.php:1048
+#: hivepress-trust-signals.php:1076
 msgid "Activity"
 msgstr ""
 
-#: hivepress-trust-signals.php:1082
+#: hivepress-trust-signals.php:1110
 msgid "within an hour"
 msgstr ""
 
-#: hivepress-trust-signals.php:1083
+#: hivepress-trust-signals.php:1111
 msgid "within a few hours"
 msgstr ""
 
-#: hivepress-trust-signals.php:1084
+#: hivepress-trust-signals.php:1112
 msgid "within a day"
 msgstr ""
 
-#: hivepress-trust-signals.php:1085
+#: hivepress-trust-signals.php:1113
 msgid "within a few days"
 msgstr ""
 
-#: hivepress-trust-signals.php:1086
+#: hivepress-trust-signals.php:1114
 msgid "within a week"
 msgstr ""
 
-#: hivepress-trust-signals.php:1087
+#: hivepress-trust-signals.php:1115
 msgid "within two weeks"
 msgstr ""
 
-#: hivepress-trust-signals.php:1088
+#: hivepress-trust-signals.php:1116
 msgid "within a month"
 msgstr ""
