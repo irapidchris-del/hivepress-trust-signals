@@ -254,21 +254,21 @@ function hpts_register_settings( $settings ) {
 
 					'trust_signals_order_listing'   => [
 						'label'       => __( 'Listing page sidebar order', 'hivepress-trust-signals' ),
-						'description' => __( 'Sets where the block appears among the other sidebar elements on listing pages. A lower number places it higher on the page; a higher number places it lower down. Default: 35.', 'hivepress-trust-signals' ),
+						'description' => __( 'Sets where the block appears among the other sidebar elements on listing pages. A lower number places it higher on the page; a higher number places it lower down. Default: 15.', 'hivepress-trust-signals' ),
 						'type'        => 'number',
 						'min_value'   => 1,
 						'max_value'   => 100,
-						'default'     => 35,
+						'default'     => 15,
 						'_order'      => 24,
 					],
 
 					'trust_signals_order_vendor'    => [
 						'label'       => __( 'Vendor page sidebar order', 'hivepress-trust-signals' ),
-						'description' => __( 'Sets where the block appears among the other sidebar elements on vendor profile pages. A lower number places it higher on the page; a higher number places it lower down. Default: 35.', 'hivepress-trust-signals' ),
+						'description' => __( 'Sets where the block appears among the other sidebar elements on vendor profile pages. A lower number places it higher on the page; a higher number places it lower down. Default: 25.', 'hivepress-trust-signals' ),
 						'type'        => 'number',
 						'min_value'   => 1,
 						'max_value'   => 100,
-						'default'     => 35,
+						'default'     => 25,
 						'_order'      => 26,
 					],
 
@@ -465,14 +465,23 @@ function hpts_locations() {
 
 /**
  * Gets the admin-configured sidebar position for the block on a given page
- * type. Listing and vendor pages each have their own setting. Lower numbers
- * render higher in the sidebar; the value is coerced to a minimum of 1.
+ * type. Listing and vendor pages each have their own setting and default
+ * (listing 15, vendor 25). Lower numbers render higher in the sidebar; the
+ * value is coerced to a minimum of 1. The per-type defaults here must match
+ * the field defaults in hpts_register_settings().
  *
  * @param string $type Page type, 'listing' or 'vendor'.
  * @return int
  */
 function hpts_sidebar_order( $type ) {
-	return max( 1, (int) hpts_get_option( 'trust_signals_order_' . $type, 35 ) );
+	$defaults = [
+		'listing' => 15,
+		'vendor'  => 25,
+	];
+
+	$default = isset( $defaults[ $type ] ) ? $defaults[ $type ] : 15;
+
+	return max( 1, (int) hpts_get_option( 'trust_signals_order_' . $type, $default ) );
 }
 
 /**
@@ -503,9 +512,8 @@ function hpts_inject_listing_block( $template ) {
 	}
 
 	// Sidebar position is admin-configurable (Trust Signals settings). The default
-	// of 35 places the block directly beneath the vendor card on listing pages
-	// (attributes 10, actions 20, vendor card 30), where it reads as credentials
-	// for the person you are about to book.
+	// of 15 places the block near the top of the listing sidebar, between the
+	// listing attributes (10) and the actions (20).
 	return hivepress()->helper->merge_trees(
 		$template,
 		[
@@ -532,8 +540,8 @@ function hpts_inject_vendor_block( $template ) {
 	}
 
 	// Vendor sidebar (summary 10, attributes 20, actions 30). Position is set by
-	// its own admin option; the default of 35 sits just below the vendor's
-	// actions, above any sidebar widgets.
+	// its own admin option; the default of 25 sits between the vendor's
+	// attributes (20) and actions (30).
 	return hivepress()->helper->merge_trees(
 		$template,
 		[
