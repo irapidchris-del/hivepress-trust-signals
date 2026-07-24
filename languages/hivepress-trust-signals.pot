@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Trust Signals for HivePress 1.7.0\n"
 "Report-Msgid-Bugs-To: https://community.hivepress.io\n"
-"POT-Creation-Date: 2026-07-22 12:17+0000\n"
+"POT-Creation-Date: 2026-07-24 12:44+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -23,7 +23,7 @@ msgstr ""
 msgid "Verified badge"
 msgstr ""
 
-#: hivepress-trust-signals.php:176 hivepress-trust-signals.php:817
+#: hivepress-trust-signals.php:176 hivepress-trust-signals.php:820
 msgid "Member since"
 msgstr ""
 
@@ -207,26 +207,26 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: hivepress-trust-signals.php:799 hivepress-trust-signals.php:801
+#: hivepress-trust-signals.php:802 hivepress-trust-signals.php:804
 msgid "Verified"
 msgstr ""
 
-#: hivepress-trust-signals.php:800
+#: hivepress-trust-signals.php:803
 msgid "Yes"
 msgstr ""
 
 #. translators: %s: month and year.
-#: hivepress-trust-signals.php:821
+#: hivepress-trust-signals.php:824
 #, php-format
 msgid "Member since %s"
 msgstr ""
 
-#: hivepress-trust-signals.php:837
+#: hivepress-trust-signals.php:840
 msgid "Active listings"
 msgstr ""
 
 #. translators: %s: number of listings.
-#: hivepress-trust-signals.php:841
+#: hivepress-trust-signals.php:844
 #, php-format
 msgid "%s active listing"
 msgid_plural "%s active listings"
@@ -234,27 +234,27 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: average rating, 2: number of reviews.
-#: hivepress-trust-signals.php:862
+#: hivepress-trust-signals.php:865
 #, php-format
 msgid "%1$s / 5 (%2$s review)"
 msgid_plural "%1$s / 5 (%2$s reviews)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: hivepress-trust-signals.php:870
+#: hivepress-trust-signals.php:873
 msgid "Rating"
 msgstr ""
 
-#: hivepress-trust-signals.php:894
+#: hivepress-trust-signals.php:897
 msgid "Saved as favourite"
 msgstr ""
 
-#: hivepress-trust-signals.php:895
+#: hivepress-trust-signals.php:898
 msgid "Favourites received"
 msgstr ""
 
 #. translators: %s: number of users.
-#: hivepress-trust-signals.php:898
+#: hivepress-trust-signals.php:901
 #, php-format
 msgid "%s time"
 msgid_plural "%s times"
@@ -262,85 +262,85 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of users.
-#: hivepress-trust-signals.php:903
+#: hivepress-trust-signals.php:906
 #, php-format
 msgid "Favourited %s time"
 msgid_plural "Favourited %s times"
 msgstr[0] ""
 msgstr[1] ""
 
-#: hivepress-trust-signals.php:923
+#: hivepress-trust-signals.php:926
 msgid "Completed bookings"
 msgstr ""
 
 #. translators: %s: number of bookings.
-#: hivepress-trust-signals.php:927
+#: hivepress-trust-signals.php:930
 #, php-format
 msgid "%s completed booking"
 msgid_plural "%s completed bookings"
 msgstr[0] ""
 msgstr[1] ""
 
-#: hivepress-trust-signals.php:962
+#: hivepress-trust-signals.php:965
 msgid "Typically replies"
 msgstr ""
 
 #. translators: %s: response time bucket, e.g. "within an hour".
-#: hivepress-trust-signals.php:966
+#: hivepress-trust-signals.php:969
 #, php-format
 msgid "Replies %s"
 msgstr ""
 
-#: hivepress-trust-signals.php:984
+#: hivepress-trust-signals.php:987
 msgid "Response rate"
 msgstr ""
 
 #. translators: %s: percentage.
-#: hivepress-trust-signals.php:988
+#: hivepress-trust-signals.php:991
 #, php-format
 msgid "%s%% response rate"
 msgstr ""
 
-#: hivepress-trust-signals.php:1007
+#: hivepress-trust-signals.php:1010
 msgid "Active today"
 msgstr ""
 
-#: hivepress-trust-signals.php:1009
+#: hivepress-trust-signals.php:1012
 msgid "Active this week"
 msgstr ""
 
-#: hivepress-trust-signals.php:1011
+#: hivepress-trust-signals.php:1014
 msgid "Active this month"
 msgstr ""
 
-#: hivepress-trust-signals.php:1021
+#: hivepress-trust-signals.php:1024
 msgid "Activity"
 msgstr ""
 
-#: hivepress-trust-signals.php:1055
+#: hivepress-trust-signals.php:1058
 msgid "within an hour"
 msgstr ""
 
-#: hivepress-trust-signals.php:1056
+#: hivepress-trust-signals.php:1059
 msgid "within a few hours"
 msgstr ""
 
-#: hivepress-trust-signals.php:1057
+#: hivepress-trust-signals.php:1060
 msgid "within a day"
 msgstr ""
 
-#: hivepress-trust-signals.php:1058
+#: hivepress-trust-signals.php:1061
 msgid "within a few days"
 msgstr ""
 
-#: hivepress-trust-signals.php:1059
+#: hivepress-trust-signals.php:1062
 msgid "within a week"
 msgstr ""
 
-#: hivepress-trust-signals.php:1060
+#: hivepress-trust-signals.php:1063
 msgid "within two weeks"
 msgstr ""
 
-#: hivepress-trust-signals.php:1061
+#: hivepress-trust-signals.php:1064
 msgid "within a month"
 msgstr ""

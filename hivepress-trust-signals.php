@@ -573,7 +573,10 @@ function hpts_render_block() {
 		if ( 'pills' === $style ) {
 			$output .= $icon . '<span class="hpts-item__text">' . esc_html( $signal['pill'] ) . '</span>';
 		} else {
-			$output .= '<span class="hpts-item__label">' . $icon . esc_html( $signal['label'] ) . '</span>';
+			// The label text is wrapped separately so its muted opacity does not
+			// fade the icon, which carries the admin-chosen icon colour (CSS
+			// opacity on a parent cannot be overridden by a child).
+			$output .= '<span class="hpts-item__label">' . $icon . '<span class="hpts-item__label-text">' . esc_html( $signal['label'] ) . '</span></span>';
 			$output .= '<span class="hpts-item__value">' . esc_html( $signal['value'] ) . '</span>';
 		}
 
@@ -738,7 +741,7 @@ function hpts_inline_css() {
 		. '.hpts-block--rows .hpts-item{display:flex;justify-content:space-between;align-items:baseline;gap:.75rem;padding:.45rem 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:.9em}'
 		. '.hpts-block--rows .hpts-item:last-child{border-bottom:none;padding-bottom:0}'
 		. '.hpts-block--rows .hpts-item:first-child{padding-top:0}'
-		. '.hpts-block--rows .hpts-item__label{opacity:.7}'
+		. '.hpts-block--rows .hpts-item__label-text{opacity:.7}'
 		. '.hpts-block--rows .hpts-item__label .fas{margin-right:.45em}'
 		. '.hpts-block--rows .hpts-item__value{font-weight:600;text-align:right}'
 		// Pill style: uniform thickness via min-height and fixed line-height.

@@ -27,6 +27,7 @@ Translation-ready: all strings use the hivepress-trust-signals text domain, with
 = 1.7.0 =
 * Changed: the reply-speed wording now scales truthfully with the vendor's actual median - within an hour, a few hours, a day, a few days, a week, two weeks, or a month. The "Slowest response time to display" setting now only controls whether the signal is shown at all, so whatever is displayed always reads true at any cap.
 * Improved: the completed-bookings counter is now updated as soon as a booking completes instead of on the next page view, so short booking storage periods can no longer delete a booking before it is counted (verified against the Bookings extension source).
+* Fixed: in the list-rows style, a custom icon colour now renders at full strength - the muted row-label text no longer fades the icon along with it (pill chips were already correct).
 * Fixed: uninstall now also removes the three response-statistics settings added in 1.6.0 (grace period, minimum rate, slowest response time to display).
 * Fixed: removed a leftover extension-directory registration that referenced the Color field class deleted in 1.5.3.
 * Fixed: the response-statistics query can no longer cause a PHP 8 fatal error in the rare case the database query fails.
