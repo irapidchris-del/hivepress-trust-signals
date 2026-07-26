@@ -409,11 +409,18 @@ class HPTS_GitHub_Updater {
 		delete_site_transient( 'update_plugins' );
 		wp_update_plugins();
 
-		$updates   = get_site_transient( 'update_plugins' );
-		$available = is_object( $updates ) && isset( $updates->response[ $this->basename ] );
+		// wp_update_plugins() re-ran inject_update(), which re-populated (or
+		// failed to populate) our release cache. A false result now means the
+		// GitHub lookup failed - most often a private repository.
+		if ( ! $this->get_release() ) {
+			$state = 'failed';
+		} else {
+			$updates = get_site_transient( 'update_plugins' );
+			$state   = ( is_object( $updates ) && isset( $updates->response[ $this->basename ] ) ) ? 'update' : 'current';
+		}
 
 		wp_safe_redirect(
-			add_query_arg( 'hpts_checked', $available ? 'update' : 'current', self_admin_url( 'plugins.php' ) )
+			add_query_arg( 'hpts_checked', $state, self_admin_url( 'plugins.php' ) )
 		);
 		exit;
 	}
@@ -429,9 +436,14 @@ class HPTS_GitHub_Updater {
 			return;
 		}
 
-		if ( 'update' === sanitize_key( wp_unslash( $_GET['hpts_checked'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$state = sanitize_key( wp_unslash( $_GET['hpts_checked'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		if ( 'update' === $state ) {
 			$message = __( 'Trust Signals: a newer version is available - see the update row on this screen.', 'hivepress-trust-signals' );
 			$class   = 'notice-info';
+		} elseif ( 'failed' === $state ) {
+			$message = __( 'Trust Signals: could not reach GitHub to check for updates. Make sure the plugin repository is public, then try again.', 'hivepress-trust-signals' );
+			$class   = 'notice-error';
 		} else {
 			$message = __( 'Trust Signals is up to date.', 'hivepress-trust-signals' );
 			$class   = 'notice-success';
