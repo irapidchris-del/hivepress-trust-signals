@@ -105,6 +105,11 @@ class HPTS_GitHub_Updater {
 		add_filter( 'plugins_api', [ $this, 'plugin_info' ], 10, 3 );
 		add_filter( 'upgrader_source_selection', [ $this, 'fix_source_dir' ], 10, 4 );
 		add_action( 'upgrader_process_complete', [ $this, 'flush_cache' ], 10, 2 );
+
+		// Manual "Check for updates" link on the Plugins screen.
+		add_filter( 'plugin_action_links_' . $this->basename, [ $this, 'action_links' ] );
+		add_action( 'admin_init', [ $this, 'handle_manual_check' ] );
+		add_action( 'admin_notices', [ $this, 'manual_check_notice' ] );
 	}
 
 	/**
@@ -364,5 +369,74 @@ class HPTS_GitHub_Updater {
 		if ( in_array( $this->basename, $plugins, true ) ) {
 			delete_transient( $this->cache_key );
 		}
+	}
+
+	/**
+	 * Adds a "Check for updates" link to the plugin's row on the Plugins screen.
+	 *
+	 * @param array<int|string, string> $links Existing action links.
+	 * @return array<int|string, string>
+	 */
+	public function action_links( $links ) {
+		$url = wp_nonce_url(
+			add_query_arg( 'hpts_check_update', $this->slug, self_admin_url( 'plugins.php' ) ),
+			'hpts_check_update_' . $this->slug
+		);
+
+		$links[] = '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Check for updates', 'hivepress-trust-signals' ) . '</a>';
+
+		return $links;
+	}
+
+	/**
+	 * Handles the manual check: clears the cached release and the core update
+	 * transient, forces a fresh check, and redirects back with the outcome.
+	 *
+	 * @return void
+	 */
+	public function handle_manual_check() {
+		if ( empty( $_GET['hpts_check_update'] ) || $this->slug !== sanitize_key( wp_unslash( $_GET['hpts_check_update'] ) ) ) {
+			return;
+		}
+
+		if ( ! current_user_can( 'update_plugins' ) ) {
+			return;
+		}
+
+		check_admin_referer( 'hpts_check_update_' . $this->slug );
+
+		delete_transient( $this->cache_key );
+		delete_site_transient( 'update_plugins' );
+		wp_update_plugins();
+
+		$updates   = get_site_transient( 'update_plugins' );
+		$available = is_object( $updates ) && isset( $updates->response[ $this->basename ] );
+
+		wp_safe_redirect(
+			add_query_arg( 'hpts_checked', $available ? 'update' : 'current', self_admin_url( 'plugins.php' ) )
+		);
+		exit;
+	}
+
+	/**
+	 * Shows the outcome of a manual update check.
+	 *
+	 * @return void
+	 */
+	public function manual_check_notice() {
+		// Display-only flag set by our own redirect; no state change here.
+		if ( empty( $_GET['hpts_checked'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return;
+		}
+
+		if ( 'update' === sanitize_key( wp_unslash( $_GET['hpts_checked'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$message = __( 'Trust Signals: a newer version is available - see the update row on this screen.', 'hivepress-trust-signals' );
+			$class   = 'notice-info';
+		} else {
+			$message = __( 'Trust Signals is up to date.', 'hivepress-trust-signals' );
+			$class   = 'notice-success';
+		}
+
+		echo '<div class="notice ' . esc_attr( $class ) . ' is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
 	}
 }

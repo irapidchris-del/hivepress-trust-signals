@@ -2,9 +2,9 @@
 # This file is distributed under the same license as the Trust Signals for HivePress plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Trust Signals for HivePress 1.7.2\n"
+"Project-Id-Version: Trust Signals for HivePress 1.7.3\n"
 "Report-Msgid-Bugs-To: https://community.hivepress.io\n"
-"POT-Creation-Date: 2026-07-26 08:10+0000\n"
+"POT-Creation-Date: 2026-07-26 13:43+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -361,14 +361,26 @@ msgstr ""
 msgid "within a month"
 msgstr ""
 
-#: includes/class-hpts-updater.php:286
+#: includes/class-hpts-updater.php:291
 msgid "Surfaces verifiable trust and activity data in a sidebar block on HivePress listing and vendor pages."
 msgstr ""
 
-#: includes/class-hpts-updater.php:302
+#: includes/class-hpts-updater.php:307
 msgid "See the GitHub releases page for details."
 msgstr ""
 
-#: includes/class-hpts-updater.php:340
+#: includes/class-hpts-updater.php:345
 msgid "Trust Signals could not prepare the update folder. Please try again or update manually."
+msgstr ""
+
+#: includes/class-hpts-updater.php:386
+msgid "Check for updates"
+msgstr ""
+
+#: includes/class-hpts-updater.php:433
+msgid "Trust Signals: a newer version is available - see the update row on this screen."
+msgstr ""
+
+#: includes/class-hpts-updater.php:436
+msgid "Trust Signals is up to date."
 msgstr ""

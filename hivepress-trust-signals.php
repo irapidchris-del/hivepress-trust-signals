@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Trust Signals for HivePress
  * Description: Surfaces verifiable trust and activity data (response time, completed bookings, reviews, favourites and more) in a sidebar block on HivePress listing and vendor pages.
- * Version: 1.7.2
+ * Version: 1.7.3
  * Author: ChrisB @ HivePress Community
  * Author URI: https://community.hivepress.io/u/chrisb
  * Update URI: https://github.com/irapidchris-del/hivepress-trust-signals
@@ -33,7 +33,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HPTS_VERSION', '1.7.2' );
+define( 'HPTS_VERSION', '1.7.3' );
 define( 'HPTS_CACHE_TTL', 12 * HOUR_IN_SECONDS );
 define( 'HPTS_MSG_ROW_LIMIT', 20000 );
 
