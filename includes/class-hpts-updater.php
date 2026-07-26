@@ -23,6 +23,13 @@ defined( 'ABSPATH' ) || exit;
 class HPTS_GitHub_Updater {
 
 	/**
+	 * Absolute path to the main plugin file.
+	 *
+	 * @var string
+	 */
+	private $file;
+
+	/**
 	 * Plugin basename, e.g. hivepress-trust-signals/hivepress-trust-signals.php.
 	 *
 	 * @var string
@@ -85,6 +92,7 @@ class HPTS_GitHub_Updater {
 	 * }
 	 */
 	public function __construct( $args ) {
+		$this->file      = (string) $args['file'];
 		$this->basename  = plugin_basename( $args['file'] );
 		$this->slug      = dirname( $this->basename );
 		$this->version   = (string) $args['version'];
@@ -163,10 +171,26 @@ class HPTS_GitHub_Updater {
 	 */
 	private function pick_download( $data ) {
 		if ( ! empty( $data['assets'] ) && is_array( $data['assets'] ) ) {
+			$fallback_zip = '';
+
 			foreach ( $data['assets'] as $asset ) {
-				if ( ! empty( $asset['browser_download_url'] ) && preg_match( '/\.zip$/i', (string) $asset['name'] ) ) {
+				if ( empty( $asset['browser_download_url'] ) || ! preg_match( '/\.zip$/i', (string) $asset['name'] ) ) {
+					continue;
+				}
+
+				// Prefer an asset named after the plugin (e.g.
+				// hivepress-trust-signals.zip) over any other attached zip.
+				if ( 0 === strpos( (string) $asset['name'], $this->slug ) ) {
 					return (string) $asset['browser_download_url'];
 				}
+
+				if ( '' === $fallback_zip ) {
+					$fallback_zip = (string) $asset['browser_download_url'];
+				}
+			}
+
+			if ( '' !== $fallback_zip ) {
+				return $fallback_zip;
 			}
 		}
 
@@ -239,17 +263,28 @@ class HPTS_GitHub_Updater {
 			return $result;
 		}
 
+		$headers = get_file_data(
+			$this->file,
+			[
+				'RequiresWP'  => 'Requires at least',
+				'RequiresPHP' => 'Requires PHP',
+			]
+		);
+
 		return (object) [
 			'name'          => 'Trust Signals for HivePress',
 			'slug'          => $this->slug,
 			'version'       => $release['version'],
 			'author'        => '<a href="https://community.hivepress.io/u/chrisb">ChrisB @ HivePress Community</a>',
 			'homepage'      => $release['html_url'],
+			'requires'      => $headers['RequiresWP'],
+			'requires_php'  => $headers['RequiresPHP'],
 			'download_link' => $release['download'],
 			'trunk'         => $release['download'],
 			'last_updated'  => $release['published_at'],
 			'sections'      => [
-				'changelog' => $this->format_changelog( $release['body'] ),
+				'description' => esc_html__( 'Surfaces verifiable trust and activity data in a sidebar block on HivePress listing and vendor pages.', 'hivepress-trust-signals' ),
+				'changelog'   => $this->format_changelog( $release['body'] ),
 			],
 		];
 	}
@@ -298,7 +333,12 @@ class HPTS_GitHub_Updater {
 			return trailingslashit( $desired );
 		}
 
-		return $source;
+		// Abort with a visible error rather than let the update install into the
+		// wrong (versioned) folder and silently leave the plugin on old code.
+		return new \WP_Error(
+			'hpts_rename_failed',
+			esc_html__( 'Trust Signals could not prepare the update folder. Please try again or update manually.', 'hivepress-trust-signals' )
+		);
 	}
 
 	/**
@@ -310,13 +350,18 @@ class HPTS_GitHub_Updater {
 	 * @return void
 	 */
 	public function flush_cache( $upgrader, $data ) {
-		if (
-			isset( $data['action'], $data['type'] )
-			&& 'update' === $data['action']
-			&& 'plugin' === $data['type']
-			&& ! empty( $data['plugins'] )
-			&& in_array( $this->basename, (array) $data['plugins'], true )
-		) {
+		if ( ! isset( $data['action'], $data['type'] ) || 'update' !== $data['action'] || 'plugin' !== $data['type'] ) {
+			return;
+		}
+
+		// Bulk updates pass 'plugins' (array); single "Update now" and automatic
+		// updates pass 'plugin' (string). Handle both.
+		$plugins = array_merge(
+			isset( $data['plugins'] ) ? (array) $data['plugins'] : [],
+			isset( $data['plugin'] ) ? (array) $data['plugin'] : []
+		);
+
+		if ( in_array( $this->basename, $plugins, true ) ) {
 			delete_transient( $this->cache_key );
 		}
 	}

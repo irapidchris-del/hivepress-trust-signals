@@ -5,6 +5,7 @@
  * Version: 1.7.2
  * Author: ChrisB @ HivePress Community
  * Author URI: https://community.hivepress.io/u/chrisb
+ * Update URI: https://github.com/irapidchris-del/hivepress-trust-signals
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Requires Plugins: hivepress
