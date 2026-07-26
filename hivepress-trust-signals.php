@@ -2,9 +2,10 @@
 /**
  * Plugin Name: Trust Signals for HivePress
  * Description: Surfaces verifiable trust and activity data (response time, completed bookings, reviews, favourites and more) in a sidebar block on HivePress listing and vendor pages.
- * Version: 1.7.1
+ * Version: 1.7.4
  * Author: ChrisB @ HivePress Community
  * Author URI: https://community.hivepress.io/u/chrisb
+ * Update URI: https://github.com/irapidchris-del/hivepress-trust-signals
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Requires Plugins: hivepress
@@ -32,9 +33,16 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HPTS_VERSION', '1.7.1' );
+define( 'HPTS_VERSION', '1.7.4' );
 define( 'HPTS_CACHE_TTL', 12 * HOUR_IN_SECONDS );
 define( 'HPTS_MSG_ROW_LIMIT', 20000 );
+
+// GitHub repository that publishes releases for the dashboard updater. The
+// repository (or at least its releases) must be public so sites can download
+// updates. Publish a GitHub release tagged with the new version number - e.g.
+// "1.7.3" or "v1.7.3" - and sites on an older version will be offered it.
+define( 'HPTS_GITHUB_OWNER', 'irapidchris-del' );
+define( 'HPTS_GITHUB_REPO', 'hivepress-trust-signals' );
 
 /*
 --------------------------------------------------------------------------
@@ -51,6 +59,10 @@ add_action( 'plugins_loaded', 'hpts_init' );
  */
 function hpts_init() {
 	load_plugin_textdomain( 'hivepress-trust-signals', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+
+	// GitHub dashboard updater. Registered before the HivePress dependency
+	// check so updates still work while HivePress is temporarily inactive.
+	hpts_init_updater();
 
 	if ( ! function_exists( 'hivepress' ) ) {
 		add_action(
@@ -100,6 +112,30 @@ function hpts_init() {
 	// browsing counts as activity.
 	add_action( 'wp_login', 'hpts_track_login', 10, 2 );
 	add_action( 'wp', 'hpts_track_visit' );
+}
+
+/**
+ * Loads and registers the GitHub dashboard updater. Only needed where update
+ * checks actually run (admin screens and cron), so it is skipped on front-end
+ * requests to keep them lean.
+ *
+ * @return void
+ */
+function hpts_init_updater() {
+	if ( ! is_admin() && ! wp_doing_cron() ) {
+		return;
+	}
+
+	require_once __DIR__ . '/includes/class-hpts-updater.php';
+
+	new HPTS_GitHub_Updater(
+		[
+			'file'    => __FILE__,
+			'version' => HPTS_VERSION,
+			'owner'   => HPTS_GITHUB_OWNER,
+			'repo'    => HPTS_GITHUB_REPO,
+		]
+	);
 }
 
 /*
