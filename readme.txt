@@ -4,7 +4,7 @@ Tags: hivepress, marketplace, trust, reviews, bookings
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.7.1
+Stable tag: 1.7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,7 +22,12 @@ All data stays in your WordPress database - nothing is sent externally. The opti
 
 Translation-ready: all strings use the hivepress-trust-signals text domain, with a POT template in /languages for Loco Translate or Poedit.
 
+Updates are delivered straight from the plugin's public GitHub repository: when a new release is published there, the update appears in Dashboard > Updates and on the Plugins screen just like any other plugin, and can be installed with one click.
+
 == Changelog ==
+
+= 1.7.2 =
+* Added: automatic updates from GitHub. New releases published on the plugin's GitHub repository now appear as one-click updates in the WordPress dashboard, so the plugin no longer has to be reinstalled by hand.
 
 = 1.7.1 =
 * Changed: the sidebar order is now set separately for listing pages and vendor pages (two settings instead of one), so the block can sit in a different position on each. Any value saved under the previous single setting is carried over to both on upgrade.
