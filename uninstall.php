@@ -43,8 +43,11 @@ delete_metadata( 'post', 0, 'hpts_completed_bookings', '', true );
 // Activity timestamps (user meta).
 delete_metadata( 'user', 0, 'hpts_last_active', '', true );
 
-// Cached vendor stats and the GitHub updater's cached release lookup
-// (transients, including their timeout rows).
+// The GitHub updater's cached release lookup (a site transient).
+delete_site_transient( 'hpts_github_release' );
+
+// Cached vendor stats and any legacy updater transients, including their
+// timeout rows.
 global $wpdb;
 
 $wpdb->query( // phpcs:ignore WordPress.DB -- custom analytics tables / source-verified hp_ schema; table names derive from $wpdb->prefix and cannot be placeholders; caching by design at the transient layer.
@@ -52,5 +55,7 @@ $wpdb->query( // phpcs:ignore WordPress.DB -- custom analytics tables / source-v
 	 WHERE option_name LIKE '\_transient\_hpts\_v\_%'
 	 OR option_name LIKE '\_transient\_timeout\_hpts\_v\_%'
 	 OR option_name LIKE '\_transient\_hpts\_gh\_release\_%'
-	 OR option_name LIKE '\_transient\_timeout\_hpts\_gh\_release\_%'"
+	 OR option_name LIKE '\_transient\_timeout\_hpts\_gh\_release\_%'
+	 OR option_name LIKE '\_site\_transient\_hpts\_github\_release'
+	 OR option_name LIKE '\_site\_transient\_timeout\_hpts\_github\_release'"
 );
