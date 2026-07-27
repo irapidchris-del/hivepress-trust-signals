@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Trust Signals for HivePress
  * Description: Surfaces verifiable trust and activity data (response time, completed bookings, reviews, favourites and more) in a sidebar block on HivePress listing and vendor pages.
- * Version: 1.7.4
+ * Version: 1.7.5
  * Author: ChrisB @ HivePress Community
  * Author URI: https://community.hivepress.io/u/chrisb
  * Update URI: https://github.com/irapidchris-del/hivepress-trust-signals
@@ -33,16 +33,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HPTS_VERSION', '1.7.4' );
+define( 'HPTS_VERSION', '1.7.5' );
 define( 'HPTS_CACHE_TTL', 12 * HOUR_IN_SECONDS );
 define( 'HPTS_MSG_ROW_LIMIT', 20000 );
-
-// GitHub repository that publishes releases for the dashboard updater. The
-// repository (or at least its releases) must be public so sites can download
-// updates. Publish a GitHub release tagged with the new version number - e.g.
-// "1.7.3" or "v1.7.3" - and sites on an older version will be offered it.
-define( 'HPTS_GITHUB_OWNER', 'irapidchris-del' );
-define( 'HPTS_GITHUB_REPO', 'hivepress-trust-signals' );
 
 /*
 --------------------------------------------------------------------------
@@ -59,10 +52,6 @@ add_action( 'plugins_loaded', 'hpts_init' );
  */
 function hpts_init() {
 	load_plugin_textdomain( 'hivepress-trust-signals', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-
-	// GitHub dashboard updater. Registered before the HivePress dependency
-	// check so updates still work while HivePress is temporarily inactive.
-	hpts_init_updater();
 
 	if ( ! function_exists( 'hivepress' ) ) {
 		add_action(
@@ -112,30 +101,6 @@ function hpts_init() {
 	// browsing counts as activity.
 	add_action( 'wp_login', 'hpts_track_login', 10, 2 );
 	add_action( 'wp', 'hpts_track_visit' );
-}
-
-/**
- * Loads and registers the GitHub dashboard updater. Only needed where update
- * checks actually run (admin screens and cron), so it is skipped on front-end
- * requests to keep them lean.
- *
- * @return void
- */
-function hpts_init_updater() {
-	if ( ! is_admin() && ! wp_doing_cron() ) {
-		return;
-	}
-
-	require_once __DIR__ . '/includes/class-hpts-updater.php';
-
-	new HPTS_GitHub_Updater(
-		[
-			'file'    => __FILE__,
-			'version' => HPTS_VERSION,
-			'owner'   => HPTS_GITHUB_OWNER,
-			'repo'    => HPTS_GITHUB_REPO,
-		]
-	);
 }
 
 /*
@@ -1636,3 +1601,320 @@ function hpts_track_visit() {
 		update_user_meta( $user_id, 'hpts_last_active', time() );
 	}
 }
+
+/*
+--------------------------------------------------------------------------
+Updates (GitHub releases).
+
+Distributed via GitHub releases rather than wordpress.org, so update
+checks go through the native update_plugins_{$hostname} API introduced in
+WordPress 5.8, keyed off the Update URI header above. The update package
+is the release asset named *.zip, which must contain a single
+hivepress-trust-signals directory.
+--------------------------------------------------------------------------
+*/
+
+define( 'HPTS_UPDATE_REPO', 'irapidchris-del/hivepress-trust-signals' );
+define( 'HPTS_UPDATE_SLUG', 'hivepress-trust-signals' );
+define( 'HPTS_UPDATE_CACHE_KEY', 'hpts_github_release' );
+
+/**
+ * Gets the installed plugin version from the header.
+ *
+ * @return string
+ */
+function hpts_update_version() {
+	static $version = null;
+
+	if ( null === $version ) {
+		$data = get_file_data( __FILE__, [ 'Version' => 'Version' ] );
+
+		$version = $data['Version'];
+	}
+
+	return $version;
+}
+
+/**
+ * Gets the latest GitHub release details, cached for 6 hours (1 hour on
+ * failure so the API is not queried repeatedly while it is unreachable).
+ *
+ * @param bool $force Bypass the cache.
+ * @return array<string, string>|null
+ */
+function hpts_get_latest_release( $force = false ) {
+	$release = $force ? false : get_site_transient( HPTS_UPDATE_CACHE_KEY );
+
+	if ( ! is_array( $release ) ) {
+		$release = hpts_fetch_latest_release();
+
+		set_site_transient( HPTS_UPDATE_CACHE_KEY, $release, $release ? 6 * HOUR_IN_SECONDS : HOUR_IN_SECONDS );
+	}
+
+	return $release ? $release : null;
+}
+
+/**
+ * Fetches the latest release details from the GitHub API. Draft and
+ * pre-release entries are excluded by the endpoint itself.
+ *
+ * @return array<string, string>
+ */
+function hpts_fetch_latest_release() {
+	$response = wp_remote_get(
+		'https://api.github.com/repos/' . HPTS_UPDATE_REPO . '/releases/latest',
+		[
+			'timeout' => 10,
+			'headers' => [ 'Accept' => 'application/vnd.github+json' ],
+		]
+	);
+
+	if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+		return [];
+	}
+
+	$data = json_decode( wp_remote_retrieve_body( $response ), true );
+
+	if ( ! is_array( $data ) ) {
+		return [];
+	}
+
+	// The version is read from the release tag, with or without a "v" prefix.
+	$version = ltrim( (string) ( isset( $data['tag_name'] ) ? $data['tag_name'] : '' ), 'vV' );
+
+	if ( ! $version ) {
+		return [];
+	}
+
+	// The update package is the first release asset named *.zip.
+	$package = '';
+
+	foreach ( (array) ( isset( $data['assets'] ) ? $data['assets'] : [] ) as $asset ) {
+		$name = strtolower( (string) ( isset( $asset['name'] ) ? $asset['name'] : '' ) );
+
+		if ( '.zip' === substr( $name, -4 ) && ! empty( $asset['browser_download_url'] ) ) {
+			$package = (string) $asset['browser_download_url'];
+
+			break;
+		}
+	}
+
+	if ( ! $package ) {
+		return [];
+	}
+
+	return [
+		'version'   => $version,
+		'package'   => $package,
+		'url'       => (string) ( isset( $data['html_url'] ) ? $data['html_url'] : 'https://github.com/' . HPTS_UPDATE_REPO ),
+		'notes'     => (string) ( isset( $data['body'] ) ? $data['body'] : '' ),
+		'published' => (string) ( isset( $data['published_at'] ) ? $data['published_at'] : '' ),
+	];
+}
+
+/**
+ * Provides the update details to WordPress via the native GitHub-hostname
+ * filter. WordPress matches the plugin by the Update URI header hostname and
+ * compares the versions itself.
+ *
+ * @param array<string, mixed>|false $update Update data.
+ * @param array<string, string>      $plugin_data Plugin headers.
+ * @param string                     $plugin_file Plugin basename.
+ * @return array<string, mixed>|false
+ */
+function hpts_check_for_update( $update, $plugin_data, $plugin_file ) {
+	if ( plugin_basename( __FILE__ ) !== $plugin_file ) {
+		return $update;
+	}
+
+	$release = hpts_get_latest_release();
+
+	if ( ! $release ) {
+		return $update;
+	}
+
+	return [
+		'id'      => 'https://github.com/' . HPTS_UPDATE_REPO,
+		'slug'    => HPTS_UPDATE_SLUG,
+		'plugin'  => $plugin_file,
+		'version' => $release['version'],
+		'url'     => $release['url'],
+		'package' => $release['package'],
+	];
+}
+
+add_filter( 'update_plugins_github.com', 'hpts_check_for_update', 10, 3 );
+
+/**
+ * Provides the plugin details for the "View version details" popup, which
+ * would otherwise be empty for a plugin not hosted on wordpress.org.
+ *
+ * @param object|array|false $result Result object.
+ * @param string             $action API action.
+ * @param object             $args API arguments.
+ * @return object|array|false
+ */
+function hpts_plugin_information( $result, $action, $args ) {
+	if ( 'plugin_information' !== $action || ! is_object( $args ) || HPTS_UPDATE_SLUG !== ( isset( $args->slug ) ? $args->slug : '' ) ) {
+		return $result;
+	}
+
+	$release = hpts_get_latest_release();
+
+	if ( ! $release ) {
+		return $result;
+	}
+
+	$plugin_data = get_file_data(
+		__FILE__,
+		[
+			'Name'        => 'Plugin Name',
+			'Description' => 'Description',
+			'Author'      => 'Author',
+			'AuthorURI'   => 'Author URI',
+			'RequiresWP'  => 'Requires at least',
+			'RequiresPHP' => 'Requires PHP',
+		]
+	);
+
+	return (object) [
+		'name'          => $plugin_data['Name'],
+		'slug'          => HPTS_UPDATE_SLUG,
+		'version'       => $release['version'],
+		'author'        => '<a href="' . esc_url( $plugin_data['AuthorURI'] ) . '">' . esc_html( $plugin_data['Author'] ) . '</a>',
+		'homepage'      => 'https://github.com/' . HPTS_UPDATE_REPO,
+		'requires'      => $plugin_data['RequiresWP'],
+		'requires_php'  => $plugin_data['RequiresPHP'],
+		'last_updated'  => $release['published'],
+		'download_link' => $release['package'],
+		'sections'      => [
+			'description' => wpautop( esc_html( $plugin_data['Description'] ) ),
+			'changelog'   => $release['notes'] ? wpautop( esc_html( $release['notes'] ) ) : '<p>' . esc_html__( 'See the GitHub releases page for the changelog.', 'hivepress-trust-signals' ) . '</p>',
+		],
+	];
+}
+
+add_filter( 'plugins_api', 'hpts_plugin_information', 10, 3 );
+
+/**
+ * Adds the manual "Check for updates" link to the plugin row.
+ *
+ * @param array<int|string, string> $links Plugin action links.
+ * @return array<int|string, string>
+ */
+function hpts_update_check_link( $links ) {
+	if ( current_user_can( 'update_plugins' ) ) {
+		$links[] = '<a href="' . esc_url( wp_nonce_url( self_admin_url( 'plugins.php?hpts_check_updates=1' ), 'hpts_check_updates' ) ) . '">' . esc_html__( 'Check for updates', 'hivepress-trust-signals' ) . '</a>';
+	}
+
+	return $links;
+}
+
+add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'hpts_update_check_link' );
+add_filter( 'network_admin_plugin_action_links_' . plugin_basename( __FILE__ ), 'hpts_update_check_link' );
+
+/**
+ * Handles the manual update check: refreshes the cached release, re-runs the
+ * update check and redirects back to the Plugins screen with the result.
+ *
+ * @return void
+ */
+function hpts_handle_update_check() {
+	if ( ! isset( $_GET['hpts_check_updates'] ) || ! current_user_can( 'update_plugins' ) ) {
+		return;
+	}
+
+	check_admin_referer( 'hpts_check_updates' );
+
+	$release = hpts_get_latest_release( true );
+
+	wp_clean_plugins_cache();
+	wp_update_plugins();
+
+	$status = 'none';
+
+	if ( ! $release ) {
+		$status = 'error';
+	} elseif ( version_compare( $release['version'], hpts_update_version(), '>' ) ) {
+		$status = 'available';
+	}
+
+	wp_safe_redirect( add_query_arg( 'hpts_checked', $status, self_admin_url( 'plugins.php' ) ) );
+
+	exit;
+}
+
+add_action( 'admin_init', 'hpts_handle_update_check' );
+
+/**
+ * Shows the manual update check result.
+ *
+ * @return void
+ */
+function hpts_update_check_notice() {
+	if ( ! isset( $_GET['hpts_checked'] ) || ! current_user_can( 'update_plugins' ) ) {
+		return;
+	}
+
+	$status = sanitize_key( wp_unslash( $_GET['hpts_checked'] ) );
+
+	if ( 'available' === $status ) {
+		$release = hpts_get_latest_release();
+
+		/* translators: %s: new version number. */
+		$message = sprintf( __( 'A new version of Trust Signals for HivePress (%s) is available.', 'hivepress-trust-signals' ), $release ? $release['version'] : '' );
+		$class   = 'notice-success';
+	} elseif ( 'none' === $status ) {
+		$message = __( 'Trust Signals for HivePress is up to date.', 'hivepress-trust-signals' );
+		$class   = 'notice-success';
+	} elseif ( 'error' === $status ) {
+		$message = __( 'Could not reach GitHub to check for updates. Please try again later.', 'hivepress-trust-signals' );
+		$class   = 'notice-error';
+	} else {
+		return;
+	}
+
+	echo '<div class="notice ' . esc_attr( $class ) . ' is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
+}
+
+add_action( 'admin_notices', 'hpts_update_check_notice' );
+add_action( 'network_admin_notices', 'hpts_update_check_notice' );
+
+/**
+ * Keeps updates installing into the current plugin directory by renaming the
+ * extracted release folder to match, so an update can never land in a
+ * differently named folder even if the release zip is packaged unexpectedly.
+ *
+ * @param string               $source Extracted update source.
+ * @param string               $remote_source Remote source directory.
+ * @param object               $upgrader Upgrader instance.
+ * @param array<string, mixed> $hook_extra Extra hook arguments.
+ * @return string|WP_Error
+ */
+function hpts_fix_update_directory( $source, $remote_source, $upgrader, $hook_extra = [] ) {
+	global $wp_filesystem;
+
+	if ( plugin_basename( __FILE__ ) !== ( isset( $hook_extra['plugin'] ) ? $hook_extra['plugin'] : '' ) || ! $wp_filesystem ) {
+		return $source;
+	}
+
+	$directory = dirname( plugin_basename( __FILE__ ) );
+
+	if ( '.' === $directory ) {
+		return $source;
+	}
+
+	$target = trailingslashit( $remote_source ) . $directory . '/';
+
+	if ( trailingslashit( $source ) === $target ) {
+		return $source;
+	}
+
+	if ( ! $wp_filesystem->move( untrailingslashit( $source ), untrailingslashit( $target ) ) ) {
+		return new WP_Error( 'hpts_rename_failed', __( 'Could not rename the update directory.', 'hivepress-trust-signals' ) );
+	}
+
+	return $target;
+}
+
+add_filter( 'upgrader_source_selection', 'hpts_fix_update_directory', 10, 4 );

@@ -4,7 +4,7 @@ Tags: hivepress, marketplace, trust, reviews, bookings
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.7.4
+Stable tag: 1.7.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,6 +25,9 @@ Translation-ready: all strings use the hivepress-trust-signals text domain, with
 Updates are delivered straight from the plugin's public GitHub repository: when a new release is published there, the update appears in Dashboard > Updates and on the Plugins screen just like any other plugin, and can be installed with one click.
 
 == Changelog ==
+
+= 1.7.5 =
+* Changed: the GitHub updater now uses WordPress's native update mechanism (the update_plugins hostname API introduced in 5.8) for better integration and reliability. No action is needed - updates continue to appear on the Plugins screen and via the "Check for updates" link.
 
 = 1.7.4 =
 * Improved: the "Check for updates" link now reports separately when GitHub cannot be reached (for example a private repository) instead of showing "up to date", making update problems easier to diagnose.
