@@ -6,10 +6,10 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g. v1.7.8)'
+        description: 'Release tag (e.g. v1.2.0)'
         required: true
       notes:
-        description: 'Release notes (Markdown, optional, auto-generated if empty)'
+        description: 'Release notes (Markdown, optional — auto-generated if empty)'
         required: false
         default: ''
 
@@ -22,18 +22,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The cp lines below are an allowlist. A top-level file or folder missing
-      # here never reaches the zip, and tools/package.ps1 parses these same
-      # lines, so a locally built zip carries exactly these files too.
-      #
-      # The asset name is fixed at hivepress-trust-signals.zip: forum posts link to
-      # releases/latest/download/hivepress-trust-signals.zip, so renaming it would break
-      # every published download link.
       - name: Build plugin zip
         run: |
           mkdir -p build/hivepress-trust-signals
           cp hivepress-trust-signals.php uninstall.php readme.txt build/hivepress-trust-signals/
-          if [ -d languages ]; then cp -r languages build/hivepress-trust-signals/; fi
+          cp -r languages build/hivepress-trust-signals/
           cd build
           zip -r hivepress-trust-signals.zip hivepress-trust-signals
 
