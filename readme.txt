@@ -4,7 +4,7 @@ Tags: hivepress, marketplace, trust, reviews, bookings
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.7.5
+Stable tag: 1.7.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,11 +20,28 @@ Configure under HivePress > Settings > Trust Signals: display locations, the blo
 
 All data stays in your WordPress database - nothing is sent externally. The optional last-active signal stores a single timestamp per user (updated on login, on sending a message, and at most hourly while browsing logged in); the plugin also keeps a per-vendor completed-bookings counter and short-lived cached statistics. Deleting the plugin removes all of this data.
 
-Translation-ready: all strings use the hivepress-trust-signals text domain, with a POT template in /languages for Loco Translate or Poedit.
+Translation-ready: all strings use the hivepress-trust-signals text domain, with a POT template in /languages for Loco Translate or Poedit. Save translations to Loco's "System" location (the WordPress languages folder) so they survive plugin updates - they load automatically, the same way official HivePress extensions are translated.
 
 Updates are delivered straight from the plugin's public GitHub repository: when a new release is published there, the update appears in Dashboard > Updates and on the Plugins screen just like any other plugin, and can be installed with one click.
 
 == Changelog ==
+
+= 1.7.9 =
+* Fixed: the author link on the Plugins screen now points at the right profile page, matching every other extension in the range.
+* Added: your settings and the activity figures built up for each vendor are now kept when the plugin is deleted. A new "Delete All Data" tickbox under Removing the Plugin is the only thing that erases them, and it is off unless you turn it on. Previously deleting the plugin always wiped everything, including each vendor's completed bookings total, which cannot be rebuilt.
+* Added: a "Donate" link on the Plugins screen and in the plugin details popup, for anyone who would like to support the work. It appears nowhere else and gates nothing.
+
+= 1.7.8 =
+* Changed: translations now load through WordPress's built-in just-in-time mechanism, exactly as the official HivePress extensions do. Nothing to change for existing sites; translations saved in Loco Translate's "System" location keep working and survive plugin updates.
+
+= 1.7.7 =
+* Changed: the sidebar block is now injected with HivePress's newer merge_blocks API instead of merge_trees, which HivePress plans to deprecate. No change in behaviour or placement.
+* Fixed: the "Show icons" setting no longer repeats its label beside the checkbox (HivePress reuses the label as the checkbox caption when none is set; it now has its own caption).
+
+= 1.7.6 =
+* Fixed: the booking cache refresh registered on the HivePress model hooks never ran, because it checked for a model getter with method_exists and HivePress model getters are magic methods. The plain WordPress fallback hook was covering for it, so displayed data was unaffected, but the intended refresh path now works.
+* Fixed: a number setting cleared to empty (for example the sidebar order or the response-rate grace period) is now read as its documented default instead of zero.
+* Added: short explanations on the last few settings that had none (block title, show on, pill colours), and an introductory description on both settings sections.
 
 = 1.7.5 =
 * Changed: the GitHub updater now uses WordPress's native update mechanism (the update_plugins hostname API introduced in 5.8) for better integration and reliability. No action is needed - updates continue to appear on the Plugins screen and via the "Check for updates" link.

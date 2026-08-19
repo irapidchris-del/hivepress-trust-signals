@@ -1,17 +1,18 @@
 <?php
 /**
  * Plugin Name: Trust Signals for HivePress
+ * Plugin URI: https://github.com/irapidchris-del/hivepress-trust-signals
  * Description: Surfaces verifiable trust and activity data (response time, completed bookings, reviews, favourites and more) in a sidebar block on HivePress listing and vendor pages.
- * Version: 1.7.5
+ * Version: 1.7.9
  * Author: ChrisB @ HivePress Community
- * Author URI: https://community.hivepress.io/u/chrisb
+ * Author URI: https://community.hivepress.io/u/chrisb/summary
  * Update URI: https://github.com/irapidchris-del/hivepress-trust-signals
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Requires Plugins: hivepress
  * License: GPLv2 or later
  * Text Domain: hivepress-trust-signals
- * Domain Path: /languages
+ * Domain Path: /languages/
  *
  * @package HivePress\Trust_Signals
  *
@@ -33,9 +34,16 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HPTS_VERSION', '1.7.5' );
+define( 'HPTS_VERSION', '1.7.9' );
 define( 'HPTS_CACHE_TTL', 12 * HOUR_IN_SECONDS );
 define( 'HPTS_MSG_ROW_LIMIT', 20000 );
+
+/**
+ * The author's support page.
+ *
+ * One place, so the Plugins row and the View details popup can never drift apart.
+ */
+define( 'HPTS_SUPPORT_URL', 'https://ko-fi.com/chrisbathivepresscommunity' );
 
 /*
 --------------------------------------------------------------------------
@@ -51,8 +59,12 @@ add_action( 'plugins_loaded', 'hpts_init' );
  * @return void
  */
 function hpts_init() {
-	load_plugin_textdomain( 'hivepress-trust-signals', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-
+	// No load_plugin_textdomain(): like every official HivePress extension,
+	// translations rely on the Text Domain / Domain Path headers and load
+	// just-in-time from wp-content/languages/plugins/ (Loco's "System"
+	// location, which survives plugin updates). All translated strings live
+	// inside callbacks that fire on init or later, so nothing translates
+	// before WordPress is ready for it.
 	if ( ! function_exists( 'hivepress' ) ) {
 		add_action(
 			'admin_notices',
@@ -229,25 +241,28 @@ function hpts_register_settings( $settings ) {
 
 		'sections' => [
 			'display' => [
-				'title'  => __( 'Display', 'hivepress-trust-signals' ),
-				'_order' => 10,
+				'title'       => __( 'Display', 'hivepress-trust-signals' ),
+				'description' => __( 'Choose where the block appears and how it looks. The signals themselves are chosen in the Signals section below.', 'hivepress-trust-signals' ),
+				'_order'      => 10,
 
-				'fields' => [
+				'fields'      => [
 					'trust_signals_title'           => [
-						'label'      => __( 'Block title', 'hivepress-trust-signals' ),
-						'type'       => 'text',
-						'default'    => __( 'Overview', 'hivepress-trust-signals' ),
-						'max_length' => 64,
-						'_order'     => 10,
+						'label'       => __( 'Block title', 'hivepress-trust-signals' ),
+						'description' => __( 'The heading shown above the block. Leave empty to show the signals without a heading.', 'hivepress-trust-signals' ),
+						'type'        => 'text',
+						'default'     => __( 'Overview', 'hivepress-trust-signals' ),
+						'max_length'  => 64,
+						'_order'      => 10,
 					],
 
 					'trust_signals_locations'       => [
-						'label'   => __( 'Show on', 'hivepress-trust-signals' ),
-						'type'    => 'checkboxes',
-						'default' => [ 'listing_page', 'vendor_page' ],
-						'_order'  => 20,
+						'label'       => __( 'Show on', 'hivepress-trust-signals' ),
+						'description' => __( 'The block is added to the sidebar of the ticked page types.', 'hivepress-trust-signals' ),
+						'type'        => 'checkboxes',
+						'default'     => [ 'listing_page', 'vendor_page' ],
+						'_order'      => 20,
 
-						'options' => [
+						'options'     => [
 							'listing_page' => __( 'Listing pages (sidebar)', 'hivepress-trust-signals' ),
 							'vendor_page'  => __( 'Vendor profile pages (sidebar)', 'hivepress-trust-signals' ),
 						],
@@ -301,6 +316,9 @@ function hpts_register_settings( $settings ) {
 
 					'trust_signals_icons'           => [
 						'label'       => __( 'Show icons', 'hivepress-trust-signals' ),
+						// Without a caption the checkbox repeats its label
+						// beside the box (core falls back to the label).
+						'caption'     => __( 'Show an icon beside each signal', 'hivepress-trust-signals' ),
 						'description' => __( 'Uses the Font Awesome 5 solid icons bundled with HivePress core. If your site subsets or replaces Font Awesome, make sure the required glyphs are included.', 'hivepress-trust-signals' ),
 						'type'        => 'checkbox',
 						'_order'      => 40,
@@ -324,19 +342,21 @@ function hpts_register_settings( $settings ) {
 					],
 
 					'trust_signals_color_pill_bg'   => [
-						'label'      => __( 'Pill background colour', 'hivepress-trust-signals' ),
-						'type'       => $color_type,
-						'default'    => '#eaecf0',
-						'attributes' => [ 'data-default-color' => '#eaecf0' ],
-						'_order'     => 70,
+						'label'       => __( 'Pill background colour', 'hivepress-trust-signals' ),
+						'description' => __( 'Background colour of the pill chips. Applies when the display style is pill chips.', 'hivepress-trust-signals' ),
+						'type'        => $color_type,
+						'default'     => '#eaecf0',
+						'attributes'  => [ 'data-default-color' => '#eaecf0' ],
+						'_order'      => 70,
 					],
 
 					'trust_signals_color_pill_text' => [
-						'label'      => __( 'Pill text colour', 'hivepress-trust-signals' ),
-						'type'       => $color_type,
-						'default'    => '#4a5568',
-						'attributes' => [ 'data-default-color' => '#4a5568' ],
-						'_order'     => 80,
+						'label'       => __( 'Pill text colour', 'hivepress-trust-signals' ),
+						'description' => __( 'Text colour of the pill chips. Applies when the display style is pill chips.', 'hivepress-trust-signals' ),
+						'type'        => $color_type,
+						'default'     => '#4a5568',
+						'attributes'  => [ 'data-default-color' => '#4a5568' ],
+						'_order'      => 80,
 					],
 
 					'trust_signals_schema'          => [
@@ -350,10 +370,11 @@ function hpts_register_settings( $settings ) {
 			],
 
 			'signals' => [
-				'title'  => __( 'Signals', 'hivepress-trust-signals' ),
-				'_order' => 20,
+				'title'       => __( 'Signals', 'hivepress-trust-signals' ),
+				'description' => __( 'Choose which signals appear in the block and tune the thresholds for the response statistics. A signal is shown only when its data exists, so an enabled signal can still be hidden on some pages.', 'hivepress-trust-signals' ),
+				'_order'      => 20,
 
-				'fields' => [
+				'fields'      => [
 					'trust_signals_items'             => [
 						'label'       => __( 'Enabled signals', 'hivepress-trust-signals' ),
 						'description' => __( 'Signals that depend on an extension are hidden automatically if that extension is inactive or there is not enough data. Response time and rate thresholds are configurable below. Signals are omitted rather than estimated.', 'hivepress-trust-signals' ),
@@ -404,6 +425,33 @@ function hpts_register_settings( $settings ) {
 					],
 				],
 			],
+
+			'removal' => [
+				'title'       => __( 'Removing the Plugin', 'hivepress-trust-signals' ),
+
+				// The section description carries the warning about WordPress's own wording,
+				// because the delete screen prints "will also delete its data" for any plugin
+				// shipping an uninstall.php, whatever that file actually does
+				// (wp-admin/plugins.php:376-380), and a site owner reading it has no way to
+				// tell that it does not apply here.
+				'description' => __( 'Your settings and the activity figures built up for each vendor are kept if you delete this plugin, so you can reinstall it and carry on. WordPress shows its own warning on the delete screen saying the data goes too, but that warning is the same for every plugin and does not apply here unless you tick the box below. Switching the plugin off never removes anything.', 'hivepress-trust-signals' ),
+				'_order'      => 30,
+
+				'fields'      => [
+					'trust_signals_delete_data' => [
+						'label'       => __( 'Delete All Data', 'hivepress-trust-signals' ),
+						'caption'     => __( 'Delete everything when this plugin is deleted', 'hivepress-trust-signals' ),
+
+						// Spelled out rather than summarised as "all data": the owner is authorising
+						// something irreversible that nothing will confirm at the time. The completed
+						// bookings counter is called out separately because it only ever counts up and
+						// cannot be rebuilt from anything else once it is gone.
+						'description' => __( 'Leave this unticked unless you are certain. With it ticked, deleting the plugin also removes every setting on this page, each vendor\'s completed bookings total, and the last-active times used for the response figures. The completed bookings total only ever counts up and cannot be rebuilt afterwards. It cannot be undone and nothing asks you to confirm at the time, so copy down anything you want to keep first. Deleting the plugin with this unticked keeps all of it.', 'hivepress-trust-signals' ),
+						'type'        => 'checkbox',
+						'_order'      => 10,
+					],
+				],
+			],
 		],
 	];
 
@@ -431,6 +479,21 @@ function hpts_get_option( $name, $fallback ) {
 	}
 
 	return $value;
+}
+
+/**
+ * Reads a number option. A cleared number field saves as an empty string,
+ * which would otherwise be read as 0 (or coerced to a minimum) instead of the
+ * documented default - so non-numeric values fall back to the default.
+ *
+ * @param string $name Option name without the hp_ prefix.
+ * @param int    $fallback Value when the option is absent or empty.
+ * @return int
+ */
+function hpts_get_number_option( $name, $fallback ) {
+	$value = hpts_get_option( $name, $fallback );
+
+	return is_numeric( $value ) ? (int) $value : (int) $fallback;
 }
 
 /**
@@ -482,7 +545,7 @@ function hpts_sidebar_order( $type ) {
 
 	$default = isset( $defaults[ $type ] ) ? $defaults[ $type ] : 15;
 
-	return max( 1, (int) hpts_get_option( 'trust_signals_order_' . $type, $default ) );
+	return max( 1, hpts_get_number_option( 'trust_signals_order_' . $type, $default ) );
 }
 
 /**
@@ -514,15 +577,15 @@ function hpts_inject_listing_block( $template ) {
 
 	// Sidebar position is admin-configurable (Trust Signals settings). The default
 	// of 15 places the block near the top of the listing sidebar, between the
-	// listing attributes (10) and the actions (20).
-	return hivepress()->helper->merge_trees(
+	// listing attributes (10) and the actions (20). merge_blocks (not the
+	// soon-deprecated merge_trees) matches page_sidebar wherever it sits in
+	// the tree and merges the new child block in.
+	return hivepress()->template->merge_blocks(
 		$template,
 		[
-			'blocks' => [
-				'page_sidebar' => [
-					'blocks' => [
-						'trust_signals' => hpts_block_args( hpts_sidebar_order( 'listing' ) ),
-					],
+			'page_sidebar' => [
+				'blocks' => [
+					'trust_signals' => hpts_block_args( hpts_sidebar_order( 'listing' ) ),
 				],
 			],
 		]
@@ -543,14 +606,12 @@ function hpts_inject_vendor_block( $template ) {
 	// Vendor sidebar (summary 10, attributes 20, actions 30). Position is set by
 	// its own admin option; the default of 25 sits between the vendor's
 	// attributes (20) and actions (30).
-	return hivepress()->helper->merge_trees(
+	return hivepress()->template->merge_blocks(
 		$template,
 		[
-			'blocks' => [
-				'page_sidebar' => [
-					'blocks' => [
-						'trust_signals' => hpts_block_args( hpts_sidebar_order( 'vendor' ) ),
-					],
+			'page_sidebar' => [
+				'blocks' => [
+					'trust_signals' => hpts_block_args( hpts_sidebar_order( 'vendor' ) ),
 				],
 			],
 		]
@@ -794,9 +855,8 @@ function hpts_inline_css() {
 		. '.hpts-block__title{margin:0 0 1.25rem;text-align:center}'
 		// Fixed icon metrics so pills with and without icons match in height.
 		. '.hpts-block .fas{color:' . $icon_color . ';font-size:1em;line-height:1;flex:0 0 auto}'
-		/*
-		Card fallback: exact HivePress theme sidebar-widget values, applied
-			only when the theme does not style .widget--sidebar itself. */
+		// Card fallback: exact HivePress theme sidebar-widget values, applied
+		// only when the theme does not style .widget--sidebar itself.
 		. '.hpts-block--card{padding:2rem;border:1px solid rgba(7,36,86,.075);border-radius:3px;box-shadow:0 2px 4px 0 rgba(7,36,86,.075);background-color:#fff}'
 		// Rows style.
 		. '.hpts-block--rows .hpts-item{display:flex;justify-content:space-between;align-items:baseline;gap:.75rem;padding:.45rem 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:.9em}'
@@ -995,7 +1055,7 @@ function hpts_collect_signals( $vendor_id, $listing_id = 0 ) {
 	}
 
 	// 7 & 8. Response time / rate.
-	$min_samples = max( 1, (int) hpts_get_option( 'trust_signals_min_samples', 3 ) );
+	$min_samples = max( 1, hpts_get_number_option( 'trust_signals_min_samples', 3 ) );
 	$response    = isset( $cached['response'] ) ? $cached['response'] : null;
 	$wants_msgs  = in_array( 'response_time', $enabled, true ) || in_array( 'response_rate', $enabled, true );
 
@@ -1017,7 +1077,7 @@ function hpts_collect_signals( $vendor_id, $listing_id = 0 ) {
 			if ( ! $bucket ) {
 				$debug[] = sprintf(
 					'response_time: hidden (median response is slower than the %d-day display cap; raise "Slowest response time to display" in settings to show it).',
-					max( 1, (int) hpts_get_option( 'trust_signals_response_max_days', 3 ) )
+					max( 1, hpts_get_number_option( 'trust_signals_response_max_days', 3 ) )
 				);
 			} else {
 				$signals[] = [
@@ -1037,7 +1097,7 @@ function hpts_collect_signals( $vendor_id, $listing_id = 0 ) {
 		// Shown only at 80%+ so the block never actively harms a vendor;
 		// below that we omit rather than display (documented in settings).
 		if ( in_array( 'response_rate', $enabled, true ) && null !== $response['rate'] ) {
-			$rate_min = (int) hpts_get_option( 'trust_signals_rate_min', 80 );
+			$rate_min = hpts_get_number_option( 'trust_signals_rate_min', 80 );
 
 			if ( $rate_min > 0 && $response['rate'] < $rate_min ) {
 				$debug[] = sprintf( 'response_rate: hidden (%d%%; shown only at %d%%+ per the settings threshold).', $response['rate'], $rate_min );
@@ -1107,7 +1167,7 @@ function hpts_collect_signals( $vendor_id, $listing_id = 0 ) {
  * @return string|null
  */
 function hpts_response_bucket( $seconds ) {
-	$cap = max( 1, (int) hpts_get_option( 'trust_signals_response_max_days', 3 ) ) * DAY_IN_SECONDS;
+	$cap = max( 1, hpts_get_number_option( 'trust_signals_response_max_days', 3 ) ) * DAY_IN_SECONDS;
 
 	// The setting only controls visibility; the label always comes from the
 	// true value, so whatever is displayed reads true at any cap.
@@ -1153,10 +1213,10 @@ function hpts_stats_cache_stamp() {
 			implode(
 				':',
 				[
-					(string) hpts_get_option( 'trust_signals_min_samples', 3 ),
-					(string) hpts_get_option( 'trust_signals_grace_hours', 48 ),
-					(string) hpts_get_option( 'trust_signals_rate_min', 80 ),
-					(string) hpts_get_option( 'trust_signals_response_max_days', 3 ),
+					(string) hpts_get_number_option( 'trust_signals_min_samples', 3 ),
+					(string) hpts_get_number_option( 'trust_signals_grace_hours', 48 ),
+					(string) hpts_get_number_option( 'trust_signals_rate_min', 80 ),
+					(string) hpts_get_number_option( 'trust_signals_response_max_days', 3 ),
 				]
 			)
 		),
@@ -1262,8 +1322,10 @@ function hpts_count_favorites( $listing_ids ) {
 
 	$placeholders = implode( ',', array_fill( 0, count( $listing_ids ), '%d' ) );
 
-	return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB -- custom analytics tables / source-verified hp_ schema; table names derive from $wpdb->prefix and cannot be placeholders; caching by design at the transient layer.
-		$wpdb->prepare(
+	return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB -- source-verified hp_ schema; caching by design at the transient layer.
+		// The IN() list is built purely of %d placeholders, one per ID; the
+		// sniff cannot see placeholders through the interpolated variable.
+		$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 			"SELECT COUNT(*) FROM {$wpdb->comments}
 			 WHERE comment_type = 'hp_favorite'
 			 AND comment_post_ID IN ( $placeholders )", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -1404,7 +1466,7 @@ function hpts_compute_response_stats( $vendor_user_id ) {
 	$durations   = [];
 	$rate_total  = 0;
 	$rate_hits   = 0;
-	$grace_limit = time() - max( 0, (int) hpts_get_option( 'trust_signals_grace_hours', 48 ) ) * HOUR_IN_SECONDS;
+	$grace_limit = time() - max( 0, hpts_get_number_option( 'trust_signals_grace_hours', 48 ) ) * HOUR_IN_SECONDS;
 
 	foreach ( $threads as $thread ) {
 		if ( $thread['opened_by_vendor'] ) {
@@ -1517,9 +1579,20 @@ function hpts_on_booking_transition( $new_status, $old_status, $post ) {
  * @return void
  */
 function hpts_on_booking_change( $booking_id, $arg2 = null, $arg3 = null, $arg4 = null ) {
-	$booking = is_object( $arg2 ) ? $arg2 : ( is_object( $arg4 ) ? $arg4 : null );
+	// Model getters such as get_listing__id() are magic (dispatched by the
+	// core model's __call), so method_exists() cannot detect them - the object
+	// must be type-checked instead.
+	$booking = null;
 
-	if ( $booking && method_exists( $booking, 'get_listing__id' ) ) {
+	if ( class_exists( '\HivePress\Models\Booking' ) ) {
+		if ( $arg2 instanceof \HivePress\Models\Booking ) {
+			$booking = $arg2;
+		} elseif ( $arg4 instanceof \HivePress\Models\Booking ) {
+			$booking = $arg4;
+		}
+	}
+
+	if ( $booking ) {
 		$listing = get_post( (int) $booking->get_listing__id() );
 
 		if ( $listing && $listing->post_parent ) {
@@ -1787,6 +1860,7 @@ function hpts_plugin_information( $result, $action, $args ) {
 		'requires_php'  => $plugin_data['RequiresPHP'],
 		'last_updated'  => $release['published'],
 		'download_link' => $release['package'],
+		'donate_link'   => HPTS_SUPPORT_URL,
 		'sections'      => [
 			'description' => wpautop( esc_html( $plugin_data['Description'] ) ),
 			'changelog'   => $release['notes'] ? wpautop( esc_html( $release['notes'] ) ) : '<p>' . esc_html__( 'See the GitHub releases page for the changelog.', 'hivepress-trust-signals' ) . '</p>',
@@ -1852,11 +1926,14 @@ add_action( 'admin_init', 'hpts_handle_update_check' );
  * @return void
  */
 function hpts_update_check_notice() {
-	if ( ! isset( $_GET['hpts_checked'] ) || ! current_user_can( 'update_plugins' ) ) {
+	// Read-only display of the redirect status flag; nothing is processed or
+	// changed, so no nonce is required here (the action itself was
+	// nonce-checked in hpts_handle_update_check before redirecting).
+	if ( ! isset( $_GET['hpts_checked'] ) || ! current_user_can( 'update_plugins' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		return;
 	}
 
-	$status = sanitize_key( wp_unslash( $_GET['hpts_checked'] ) );
+	$status = sanitize_key( wp_unslash( $_GET['hpts_checked'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
 	if ( 'available' === $status ) {
 		$release = hpts_get_latest_release();
@@ -1918,3 +1995,31 @@ function hpts_fix_update_directory( $source, $remote_source, $upgrader, $hook_ex
 }
 
 add_filter( 'upgrader_source_selection', 'hpts_fix_update_directory', 10, 4 );
+
+/**
+ * Adds the house "Donate" link to this plugin's row on the Plugins screen.
+ *
+ * WordPress fires plugin_row_meta for EVERY plugin on the screen, so without the basename
+ * test the link would appear on every row on the site. The markup is copied verbatim from
+ * the house spec in `releasing.md` rather than composed here: every plugin's row has to look
+ * identical and sessions have drifted before. The label is exactly "Donate", matching the
+ * wording WordPress itself uses in the details popup, and the icon is a Dashicon rather than
+ * Font Awesome because Dashicons is the admin's own font and is always loaded there.
+ * WordPress joins row-meta items with " | " itself, so this returns a bare anchor.
+ *
+ * @param array<string> $meta        Row meta links.
+ * @param string        $plugin_file Plugin file the row belongs to.
+ * @return array<string>
+ */
+function hpts_add_row_meta( $meta, $plugin_file ) {
+	if ( plugin_basename( __FILE__ ) === $plugin_file ) {
+		$meta[] = '<a href="' . esc_url( HPTS_SUPPORT_URL ) . '" target="_blank" rel="noopener noreferrer">'
+			. '<span class="dashicons dashicons-star-filled" style="font-size:14px;line-height:1.3;"></span> '
+			. esc_html__( 'Donate', 'hivepress-trust-signals' )
+			. '</a>';
+	}
+
+	return $meta;
+}
+
+add_filter( 'plugin_row_meta', 'hpts_add_row_meta', 10, 2 );
