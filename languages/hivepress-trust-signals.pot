@@ -465,3 +465,11 @@ msgstr ""
 #: hivepress-trust-signals.php:2018
 msgid "Donate"
 msgstr ""
+
+#: hivepress-trust-signals.php:2293
+msgid "No releases have been published for Trust Signals for HivePress yet, so there is nothing to update to. This is normal for a brand new copy and does not mean anything is wrong."
+msgstr ""
+
+#: hivepress-trust-signals.php:2296
+msgid "GitHub limits how many update checks one server may make each hour, and this server has reached that limit. Nothing is wrong with the plugin or your site, and checking will work again within the hour."
+msgstr ""
