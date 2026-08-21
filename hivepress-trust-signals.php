@@ -3,7 +3,7 @@
  * Plugin Name: Trust Signals for HivePress
  * Plugin URI: https://github.com/irapidchris-del/hivepress-trust-signals
  * Description: Surfaces verifiable trust and activity data (response time, completed bookings, reviews, favourites and more) in a sidebar block on HivePress listing and vendor pages.
- * Version: 1.7.10
+ * Version: 1.7.11
  * Author: ChrisB @ HivePress Community
  * Author URI: https://community.hivepress.io/u/chrisb/summary
  * Update URI: https://github.com/irapidchris-del/hivepress-trust-signals
@@ -34,7 +34,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HPTS_VERSION', '1.7.10' );
+define( 'HPTS_VERSION', '1.7.11' );
 define( 'HPTS_CACHE_TTL', 12 * HOUR_IN_SECONDS );
 define( 'HPTS_MSG_ROW_LIMIT', 20000 );
 
@@ -1721,6 +1721,48 @@ function hpts_update_version() {
 }
 
 /**
+ * Queues a background refresh of the release cache.
+ *
+ * Prefers HivePress's scheduler, which is Action Scheduler and already refuses a duplicate of a job
+ * with the same hook and arguments, so repeated admin requests coalesce into one fetch. WP-Cron is
+ * the fallback for the same reason it exists: it also runs the work outside this request.
+ *
+ * Neither is blocking, so on a site where cron itself is starved the cache simply stays cold and no
+ * update is offered until somebody presses Check for updates, which always fetches immediately. That
+ * is the same position such a site is already in for every other scheduled thing on it.
+ *
+ * @return void
+ */
+function hpts_schedule_release_refresh() {
+	$hook = HPTS_UPDATE_CACHE_KEY . '_refresh';
+
+	// Assigned and then tested: Core defines no __isset(), so isset( hivepress()->x ) is always
+	// false even for a component that is present and working.
+	$scheduler = function_exists( 'hivepress' ) ? hivepress()->scheduler : null;
+
+	if ( $scheduler ) {
+		$scheduler->add_action( $hook );
+
+		return;
+	}
+
+	if ( ! wp_next_scheduled( $hook ) ) {
+		wp_schedule_single_event( time(), $hook );
+	}
+}
+
+/**
+ * Fills the release cache. Runs from the scheduler, never from a page render.
+ *
+ * @return void
+ */
+function hpts_refresh_release() {
+	hpts_get_latest_release( true );
+}
+
+add_action( HPTS_UPDATE_CACHE_KEY . '_refresh', 'hpts_refresh_release' );
+
+/**
  * Gets the latest GitHub release details, cached for 6 hours (1 hour on
  * failure so the API is not queried repeatedly while it is unreachable).
  *
@@ -1732,6 +1774,25 @@ function hpts_get_latest_release( $force = false ) {
 
 	if ( ! $force && is_array( $cached ) ) {
 		return $cached ? $cached : null;
+	}
+
+	/*
+	 * A cold cache must not be filled from somebody's page load. WordPress asks every plugin for its
+	 * update details while rendering an admin request, so with several of these installed one such
+	 * request made one blocking call to GitHub after another, in series: a site with nine of them
+	 * measured 18.6 seconds on a settings screen, once, and then behaved perfectly for six hours
+	 * because the answers were cached again. That is the same shape as the listing-save incident,
+	 * on the admin side rather than the public one.
+	 *
+	 * So the fetch moves to a background job and this answers with what is already known, which on
+	 * the very first check is "nothing yet" for a few seconds. Nothing is skipped: the job runs
+	 * moments later and fills the cache, and the manual Check for updates link still fetches
+	 * immediately, because there a person is waiting for the answer on purpose.
+	 */
+	if ( ! $force ) {
+		hpts_schedule_release_refresh();
+
+		return null;
 	}
 
 	$release = hpts_fetch_latest_release();
@@ -2138,18 +2199,36 @@ function hpts_check_for_update( $update, $plugin_data, $plugin_file ) {
 
 	$release = hpts_get_latest_release();
 
+	$details = [
+		'id'     => 'https://github.com/' . HPTS_UPDATE_REPO,
+		'slug'   => HPTS_UPDATE_SLUG,
+		'plugin' => $plugin_file,
+	];
+
+	/*
+	 * Answer even when there is nothing to update to. WordPress skips this plugin outright on a falsy
+	 * return (wp-includes/update.php:557), and only files an answer under `no_update` when it gets one
+	 * (:589-595) -- and that entry is what carries the `slug` the plugins list needs before it will
+	 * print "View details" (wp-admin/includes/class-wp-plugins-list-table.php:1204, verified).
+	 * Returning false left the row with no slug, so View details, the details popup and the donate link
+	 * inside it were all unreachable from the Plugins screen whenever this plugin was up to date, which
+	 * is almost always, or whenever the release check failed.
+	 */
+
 	if ( ! $release ) {
-		return $update;
+		$details['version'] = isset( $plugin_data['Version'] ) ? $plugin_data['Version'] : '0.0.0';
+
+		return $details;
 	}
 
-	return [
-		'id'      => 'https://github.com/' . HPTS_UPDATE_REPO,
-		'slug'    => HPTS_UPDATE_SLUG,
-		'plugin'  => $plugin_file,
-		'version' => $release['version'],
-		'url'     => $release['url'],
-		'package' => $release['package'],
-	];
+	return array_merge(
+		$details,
+		[
+			'version' => $release['version'],
+			'url'     => $release['url'],
+			'package' => $release['package'],
+		]
+	);
 }
 
 add_filter( 'update_plugins_github.com', 'hpts_check_for_update', 10, 3 );
