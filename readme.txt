@@ -2,9 +2,9 @@
 Contributors: chrisb
 Tags: hivepress, marketplace, trust, reviews, bookings
 Requires at least: 6.0
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.7.11
+Stable tag: 1.8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,7 @@ Adds a configurable "Overview" block to HivePress listing and vendor sidebars, b
 
 Signals hide automatically when the relevant extension is inactive or there is not enough data - the block omits rather than estimates. Site admins see an HTML comment in the page source explaining exactly why any enabled signal is hidden.
 
-Configure under HivePress > Settings > Trust Signals: display locations, the block's sidebar position (set separately for listing and vendor pages), list-row or pill-chip style, card styling (border and shadow), optional Font Awesome icons, custom colours, enabled signals, and the response-statistics thresholds (grace period, minimum rate to display, slowest response time to display, and minimum conversation sample).
+Configure under HivePress > Settings > Trust Signals: display locations, the block's sidebar position (set separately for listing and vendor pages), list-row or pill-chip style, card styling (border and shadow), optional Font Awesome icons (choosable per signal, including newer Font Awesome and brand icons, with size, weight and colour settings), custom colours, enabled signals, and the response-statistics thresholds (grace period, minimum rate to display, slowest response time to display, and minimum conversation sample).
 
 All data stays in your WordPress database - nothing is sent externally. The optional last-active signal stores a single timestamp per user (updated on login, on sending a message, and at most hourly while browsing logged in); the plugin also keeps a per-vendor completed-bookings counter and short-lived cached statistics. Deleting the plugin removes all of this data.
 
@@ -25,6 +25,24 @@ Translation-ready: all strings use the hivepress-trust-signals text domain, with
 Updates are delivered straight from the plugin's public GitHub repository: when a new release is published there, the update appears in Dashboard > Updates and on the Plugins screen just like any other plugin, and can be installed with one click.
 
 == Changelog ==
+
+= 1.8.3 =
+* Changed: internal formatting only. Some explanatory comments in the settings screen's script were reworded to match the wording used across the rest of these extensions, so the file is easier to compare with its siblings. Nothing about the settings screen, or anything else the plugin does, has changed.
+
+= 1.8.2 =
+* Changed: the settings screen now carries the same furniture as every other extension in this family. The jump links are labelled "Jump to a section:" and stay with you as you scroll, a Save Changes tab sits on the right edge of the screen wherever you are on the page, and a button in the bottom corner takes you back to the top. If you have another of these extensions installed and it has already put one of those on the screen, this plugin leaves it alone, so you always see one of each rather than two.
+* Fixed: links and bookmarks pointing at a particular settings section keep working. The quick links used to give every section heading a new name of its own, which quietly broke any link to the name WordPress had already given it.
+* Fixed: the settings screen is now found correctly when you reach it from the plain HivePress Settings menu item rather than from the Trust Signals tab link. On a site where Trust Signals is the first tab, that route used to leave the screen without its colour pickers.
+
+= 1.8.1 =
+* Changed: the icon library is now included with the plugin instead of being loaded from a third-party server, which is faster and keeps requests on your own site.
+* Changed: outline icon styles now render as outlines. An icon set to an outline style previously appeared filled in, because only the solid style was included with the plugin and your browser quietly used that instead.
+
+= 1.8.0 =
+* Added: the icon beside each signal can now be chosen, from HivePress's own icon list plus a set of newer Font Awesome and brand icons. The standard icons are unchanged, and newer choices load one shared stylesheet automatically - on pages where they actually render, and only if no other plugin from the same author has loaded it already.
+* Added: icon size (as a percentage of the surrounding text) and icon weight (Normal, Semi-bold or Bold) settings. All icon options live in a new Icons section and appear only while Show icons is ticked.
+* Added: quick links at the top of the settings tab that jump to each section, with dividers between the sections, so the tab is no longer one long undifferentiated scroll.
+* Improved: settings descriptions are shorter and easier to scan, section descriptions wrap at a readable width on wide screens, and the tooltips are wider than the narrow column WordPress gives them.
 
 = 1.7.11 =
 * Fixed - "View details" is back on the Plugins screen. WordPress only offers that link for a

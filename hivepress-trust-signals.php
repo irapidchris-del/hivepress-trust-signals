@@ -3,7 +3,7 @@
  * Plugin Name: Trust Signals for HivePress
  * Plugin URI: https://github.com/irapidchris-del/hivepress-trust-signals
  * Description: Surfaces verifiable trust and activity data (response time, completed bookings, reviews, favourites and more) in a sidebar block on HivePress listing and vendor pages.
- * Version: 1.7.11
+ * Version: 1.8.3
  * Author: ChrisB @ HivePress Community
  * Author URI: https://community.hivepress.io/u/chrisb/summary
  * Update URI: https://github.com/irapidchris-del/hivepress-trust-signals
@@ -34,7 +34,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HPTS_VERSION', '1.7.11' );
+define( 'HPTS_VERSION', '1.8.3' );
 define( 'HPTS_CACHE_TTL', 12 * HOUR_IN_SECONDS );
 define( 'HPTS_MSG_ROW_LIMIT', 20000 );
 
@@ -44,6 +44,31 @@ define( 'HPTS_MSG_ROW_LIMIT', 20000 );
  * One place, so the Plugins row and the View details popup can never drift apart.
  */
 define( 'HPTS_SUPPORT_URL', 'https://ko-fi.com/chrisbathivepresscommunity' );
+
+/*
+--------------------------------------------------------------------------
+Shared Font Awesome stylesheet.
+
+HivePress core bundles and enqueues Font Awesome 5 SOLID only, so icon
+names introduced in Font Awesome 6/7 and every brand icon render blank
+unless a fuller build is loaded. The handle is shared across this author's
+plugins on purpose: each one registers it only if no other already has, so
+one copy serves however many are active.
+
+HPTS_FA_PATH is a path relative to the plugin root, not a URL, because
+plugin_dir_url() is a function call and cannot be used at define() time here.
+It is joined to the plugin URL in hpts_enqueue_fontawesome(), which explains
+why a CDN address must never go back in its place. This constant held the
+cdnjs URL until 2026-08-30; because it is a plain define() rather than an
+enqueue argument, Plugin Check flagged it as Offloading.OffloadedContent
+rather than EnqueuedResourceOffloading, so a grep for the Enqueued code alone
+misses it.
+--------------------------------------------------------------------------
+*/
+
+define( 'HPTS_FA_HANDLE', 'freestylr-fontawesome' );
+define( 'HPTS_FA_VERSION', '7.1.0' );
+define( 'HPTS_FA_PATH', 'assets/vendor/fontawesome/css/all.min.css' );
 
 /*
 --------------------------------------------------------------------------
@@ -80,8 +105,12 @@ function hpts_init() {
 	// Settings tab under HivePress > Settings.
 	add_filter( 'hivepress/v1/settings', 'hpts_register_settings' );
 
-	// WordPress (Iris) colour picker on the HivePress settings screen.
+	// WordPress (Iris) colour picker, quick links and settings styling on the
+	// HivePress settings screen.
 	add_action( 'admin_enqueue_scripts', 'hpts_admin_scripts' );
+
+	// Shared Font Awesome stylesheet, only when a chosen icon needs it.
+	add_action( 'wp_enqueue_scripts', 'hpts_maybe_enqueue_fontawesome' );
 
 	// Sidebar block injection.
 	add_filter( 'hivepress/v1/templates/listing_view_page', 'hpts_inject_listing_block' );
@@ -171,15 +200,62 @@ function hpts_maybe_upgrade() {
 }
 
 /**
- * Enqueues the core WordPress (Iris) colour picker on the HivePress settings
- * screen and binds it to our colour fields.
+ * Whether the settings tab currently being rendered is this plugin's own.
+ *
+ * Answered from the fields HivePress has actually registered for this request,
+ * never from $_GET['tab']. The address cannot be trusted: get_settings_tab()
+ * falls back to the FIRST tab whenever "tab" is absent
+ * (hivepress/includes/components/class-admin.php:607-622), and the bare
+ * admin.php?page=hp_settings link in the HivePress menu is exactly that case,
+ * so a "tab=trust_signals" test misses this plugin's own tab on any site where
+ * it sorts first, and the settings screen then renders with no colour pickers
+ * and no chrome for a reason nothing on the page explains.
+ *
+ * register_settings() builds the sections and fields for one tab only and
+ * calls add_settings_field() with the prefixed option name
+ * (class-admin.php:287-325), so $wp_settings_fields['hp_settings'] holds
+ * hp_trust_signals_* keys on this tab and on no other - including the no-tab
+ * fallback case. It is the server-side twin of the
+ * [name^="hp_trust_signals_"] gate the script uses, and it is populated in
+ * time because HivePress registers on admin_init priority 10 while this runs
+ * on admin_enqueue_scripts, which wp-admin fires later, from admin-header.php.
+ * Move the hook earlier than that and this returns false, so re-test the tab
+ * if you ever do.
+ *
+ * @return bool
+ */
+function hpts_is_settings_tab() {
+	if ( ! isset( $GLOBALS['wp_settings_fields']['hp_settings'] ) || ! is_array( $GLOBALS['wp_settings_fields']['hp_settings'] ) ) {
+		return false;
+	}
+
+	foreach ( $GLOBALS['wp_settings_fields']['hp_settings'] as $hpts_section ) {
+		foreach ( array_keys( (array) $hpts_section ) as $hpts_field ) {
+			if ( 0 === strpos( (string) $hpts_field, 'hp_trust_signals_' ) ) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Enqueues the settings-screen assets on this plugin's tab only: the core
+ * WordPress (Iris) colour picker bound to our colour fields, the shared Font
+ * Awesome stylesheet so the icon pickers can preview every icon they offer,
+ * and the shared settings-screen chrome (the quick-links nav, the floating
+ * Save control and the back-to-top button) with the screen styling that goes
+ * with it. Scoped by enqueueing, not selectors: this function bails on every
+ * screen but this tab.
  *
  * @return void
  */
 function hpts_admin_scripts() {
-	$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	// Screen detection only, no form data is read or written.
+	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
-	if ( 'hp_settings' !== $page ) {
+	if ( 'hp_settings' !== $page || ! hpts_is_settings_tab() ) {
 		return;
 	}
 
@@ -193,6 +269,106 @@ function hpts_admin_scripts() {
 		'$("input[name=hp_trust_signals_color_pill_text]").wpColorPicker({defaultColor:"#4a5568"});' .
 		'});'
 	);
+
+	// The picker previews need the newer icons drawable on this screen,
+	// whatever the site's front end has chosen so far.
+	hpts_enqueue_fontawesome();
+
+	/*
+	 * The shared settings-screen chrome, as real files rather than inline
+	 * strings.
+	 *
+	 * Until 1.8.2 the quick-links nav and its styling were built here as PHP
+	 * string concatenation. That was fine while it was nine lines. It is not
+	 * fine for the chrome this family now shares: the block runs to about
+	 * three hundred lines of CSS and as many of JavaScript, it is a copy of
+	 * the reference implementation in Account Menu Enhancer, and every future
+	 * sweep of the family has to be able to diff one plugin's copy against
+	 * another's. A block held as a concatenated string cannot be diffed, and
+	 * every quote in it would have to be escaped by hand. This plugin already
+	 * ships an assets/ folder for the bundled Font Awesome, and its release
+	 * workflow was corrected on 2026-08-30 to copy assets/ into the released
+	 * zip, so real files reach customers.
+	 *
+	 * The old nav also broke a companion rule: it assigned its own id to every
+	 * heading unconditionally, overwriting the wp-settings-section-{name} ids
+	 * WordPress server-renders here, so any link or bookmark pointing at a
+	 * real one stopped working. The copied block reuses an existing id and
+	 * mints one only where a heading has none.
+	 *
+	 * No dependencies on the script: the chrome is plain DOM work, and the two
+	 * Dashicons glyphs it uses come from a stylesheet WordPress loads on every
+	 * wp-admin screen itself. The file mtime rides along in the version so a
+	 * cached copy cannot survive an edit within a release.
+	 */
+	$hpts_dir = plugin_dir_path( __FILE__ );
+	$hpts_url = plugin_dir_url( __FILE__ );
+
+	wp_enqueue_style(
+		'hpts-backend',
+		$hpts_url . 'assets/css/backend.css',
+		[],
+		HPTS_VERSION . '.' . (int) filemtime( $hpts_dir . 'assets/css/backend.css' )
+	);
+
+	wp_enqueue_script(
+		'hpts-backend',
+		$hpts_url . 'assets/js/backend.js',
+		[],
+		HPTS_VERSION . '.' . (int) filemtime( $hpts_dir . 'assets/js/backend.js' ),
+		true
+	);
+
+	wp_localize_script(
+		'hpts-backend',
+		'hptsBackendData',
+		[
+			'labels' => [
+				// The colon is part of the wording: it reads as a lead-in to
+				// the links that follow it, not as a heading over them. Every
+				// extension in this family uses this exact string, so two of
+				// them never label the same control differently.
+				'jumpTo'    => esc_html__( 'Jump to a section:', 'hivepress-trust-signals' ),
+				'save'      => esc_html__( 'Save Changes', 'hivepress-trust-signals' ),
+				'backToTop' => esc_html__( 'Back to top', 'hivepress-trust-signals' ),
+			],
+		]
+	);
+
+	// The per-icon font-family rules below still have to be generated, because
+	// they are built from the icon lists rather than written out, so they stay
+	// inline - attached to this plugin's own stylesheet now rather than to
+	// core's colour picker.
+	$css = '';
+
+	// Core's select2 icon template hardcodes `fas fa-fw fa-<id>`
+	// (`hivepress/assets/js/common.js:233`), which points every preview at the
+	// solid family. Brand glyphs do not exist there, and the family the Font
+	// Awesome 6/7 solid additions resolve to depends on which stylesheet
+	// enqueued last, so these per-icon rules pin the right family and weight
+	// for the added icons. Both the element and its ::before are targeted
+	// because Font Awesome 7 styles the pseudo-element directly where 5 and 6
+	// style the element, and all three majors' family names are listed so the
+	// rules hold whichever version the shared handle was registered with.
+	// Preview-only: the front end emits fa-brands/fa-solid classes and needs
+	// none of this.
+	$brand_selectors = [];
+	$solid_selectors = [];
+
+	foreach ( hpts_fa_brand_icons() as $icon_name ) {
+		$brand_selectors[] = 'i.fa-' . $icon_name;
+		$brand_selectors[] = 'i.fa-' . $icon_name . ':before';
+	}
+
+	foreach ( hpts_fa_extra_icons() as $icon_name ) {
+		$solid_selectors[] = 'i.fa-' . $icon_name;
+		$solid_selectors[] = 'i.fa-' . $icon_name . ':before';
+	}
+
+	$css .= implode( ',', $brand_selectors ) . '{font-family:"Font Awesome 7 Brands","Font Awesome 6 Brands","Font Awesome 5 Brands" !important;font-weight:400 !important;}';
+	$css .= implode( ',', $solid_selectors ) . '{font-family:"Font Awesome 7 Free","Font Awesome 6 Free","Font Awesome 5 Free" !important;font-weight:900 !important;}';
+
+	wp_add_inline_style( 'hpts-backend', $css );
 }
 
 /**
@@ -224,6 +400,232 @@ function hpts_default_signals() {
 }
 
 /**
+ * Gets the standard icon for each signal. These are the icons used when no
+ * custom choice is saved, and they are Font Awesome 5 solid names on purpose:
+ * the standard set renders from the stylesheet HivePress core already loads,
+ * so a site that customises nothing loads nothing extra.
+ *
+ * @return array<string, string>
+ */
+function hpts_default_icons() {
+	return [
+		'verified'           => 'check-circle',
+		'member_since'       => 'calendar-alt',
+		'listings_count'     => 'th-list',
+		'rating'             => 'star',
+		'favorites'          => 'heart',
+		'completed_bookings' => 'calendar-check',
+		'response_time'      => 'clock',
+		'response_rate'      => 'reply',
+		'last_active'        => 'bolt',
+	];
+}
+
+/**
+ * Solid icons offered on top of core's Font Awesome 5 picker list. Names
+ * introduced in Font Awesome 6/7, so every one needs the shared stylesheet;
+ * each is verified against the free solid set (Pro-only names render blank
+ * and must not be offered).
+ *
+ * @return array<int, string>
+ */
+function hpts_fa_extra_icons() {
+	return [
+		'bolt-lightning',
+		'calendar-days',
+		'chart-simple',
+		'circle-check',
+		'circle-info',
+		'clock-rotate-left',
+		'envelope-circle-check',
+		'hands-clapping',
+		'heart-circle-check',
+		'list-check',
+		'location-dot',
+		'message',
+		'shield-halved',
+		'shield-heart',
+		'star-half-stroke',
+	];
+}
+
+/**
+ * Brand icons offered in the pickers. Brands live in their own font family,
+ * so the render path must emit `fa-brands` for these where everything else
+ * gets a solid class: this list is what tracks which is which.
+ *
+ * @return array<int, string>
+ */
+function hpts_fa_brand_icons() {
+	return [
+		'airbnb',
+		'amazon',
+		'android',
+		'apple',
+		'behance',
+		'discord',
+		'dribbble',
+		'ebay',
+		'etsy',
+		'facebook',
+		'github',
+		'google',
+		'instagram',
+		'linkedin',
+		'medium',
+		'paypal',
+		'pinterest',
+		'reddit',
+		'shopify',
+		'skype',
+		'slack',
+		'snapchat',
+		'spotify',
+		'stripe',
+		'telegram',
+		'threads',
+		'tiktok',
+		'tumblr',
+		'twitch',
+		'viber',
+		'vimeo',
+		'whatsapp',
+		'wordpress',
+		'x-twitter',
+		'youtube',
+	];
+}
+
+/**
+ * Gets the admin-chosen icon for a signal, falling back to the standard one.
+ * A stored empty value (the "Standard icon" choice) and anything that is not
+ * a plain icon name both fall back, so the render path can trust the result.
+ *
+ * @param string $key Signal key.
+ * @return string
+ */
+function hpts_signal_icon( $key ) {
+	$defaults = hpts_default_icons();
+	$icon     = hpts_get_option( 'trust_signals_icon_' . $key, '' );
+	$icon     = is_string( $icon ) ? strtolower( trim( $icon ) ) : '';
+
+	if ( ! $icon || ! preg_match( '/^[a-z0-9-]+$/', $icon ) ) {
+		$icon = isset( $defaults[ $key ] ) ? $defaults[ $key ] : '';
+	}
+
+	return $icon;
+}
+
+/**
+ * Gets the CSS classes for an icon name. A brand icon lives in its own font
+ * family, so it must say `fa-brands`; a Font Awesome 6/7 solid icon says
+ * `fa-solid`, a class only the shared stylesheet defines; and everything else
+ * keeps the `fas` class the Font Awesome 5 build bundled with HivePress core
+ * styles on its own.
+ *
+ * @param string $icon Icon name.
+ * @return string
+ */
+function hpts_icon_class( $icon ) {
+	if ( in_array( $icon, hpts_fa_brand_icons(), true ) ) {
+		return 'fa-brands fa-' . $icon;
+	}
+
+	if ( in_array( $icon, hpts_fa_extra_icons(), true ) ) {
+		return 'fa-solid fa-' . $icon;
+	}
+
+	return 'fas fa-' . $icon;
+}
+
+/**
+ * Whether an icon needs the shared Font Awesome stylesheet (anything beyond
+ * the Font Awesome 5 solid set core already loads).
+ *
+ * @param string $icon Icon name.
+ * @return bool
+ */
+function hpts_icon_needs_fontawesome( $icon ) {
+	return in_array( $icon, hpts_fa_brand_icons(), true ) || in_array( $icon, hpts_fa_extra_icons(), true );
+}
+
+/**
+ * Registers (if no sibling plugin already has) and enqueues the shared Font
+ * Awesome stylesheet.
+ *
+ * @return void
+ */
+function hpts_enqueue_fontawesome() {
+	if ( ! wp_style_is( HPTS_FA_HANDLE, 'registered' ) ) {
+		/*
+		 * Font Awesome 7.1.0 Free is BUNDLED, in assets/vendor/fontawesome/. Never
+		 * point this at cdnjs or any other CDN. A convenience CDN copy of a library
+		 * is the exact case the offloaded-assets rule exists to catch
+		 * (resources/security-standards.md, "Offloaded assets" - a remote asset is
+		 * only acceptable when it is a service's own required SDK from that
+		 * service's own domain), Plugin Check reported an offloading error on every
+		 * plugin that did it, and Chris ruled on 2026-08-30 that the files ship with
+		 * the plugin. A comment here used to say the finding was expected and told
+		 * future sessions to leave it; that was wrong. It is also faster: cache
+		 * partitioning (Chrome 86+, Firefox, Safari) means a CDN copy is a cold
+		 * download for every site anyway, plus a DNS lookup and TLS handshake to a
+		 * third origin.
+		 *
+		 * Layout matters. assets/vendor/fontawesome/css/all.min.css sits beside
+		 * assets/vendor/fontawesome/webfonts/, so the stock "../webfonts/" paths
+		 * inside the upstream CSS resolve unchanged. Three faces ship -
+		 * fa-solid-900.woff2, fa-brands-400.woff2 and fa-regular-400.woff2 - and
+		 * only the v4-compatibility @font-face block was removed from the CSS, so
+		 * nothing can request a file that is not there. The regular face is NOT
+		 * optional, and it costs ~19 KB: with no weight-400 face declared the
+		 * browser silently substitutes the weight-900 solid one, so a far /
+		 * fa-regular name draws a FILLED glyph instead of an outline. That shipped
+		 * between 2026-08-29 and 2026-08-30 and read as somebody picking the wrong
+		 * icon rather than as a missing font, which is why it survived a whole day.
+		 *
+		 * Pinned to 7.1.0, and every plugin sharing this handle must pin the
+		 * identical version, because only the first registration of a shared handle
+		 * wins. Verified 2026-08-29 against the 7.1.0 stylesheet: it keeps the
+		 * fas/fab alias classes and the Font Awesome 5 names, so the standard icons
+		 * render identically whichever stylesheet wins. Full rule:
+		 * resources/hivepress-ui.md, "FA6/7 and brand icons: bundle them, never load
+		 * a CDN copy (2026-08-30)".
+		 */
+		wp_register_style( HPTS_FA_HANDLE, plugin_dir_url( __FILE__ ) . HPTS_FA_PATH, [], HPTS_FA_VERSION );
+	}
+
+	wp_enqueue_style( HPTS_FA_HANDLE );
+}
+
+/**
+ * Enqueues the shared stylesheet in the head of listing and vendor pages when
+ * an enabled signal uses an icon that needs it. The render callback enqueues
+ * it again as a fallback (printed in the footer), so an unusual setup where
+ * the context is not resolvable this early still renders its icons.
+ *
+ * @return void
+ */
+function hpts_maybe_enqueue_fontawesome() {
+	if ( ! hpts_get_option( 'trust_signals_icons', false ) || ! hpts_get_context() ) {
+		return;
+	}
+
+	$enabled = hpts_get_option( 'trust_signals_items', hpts_default_signals() );
+
+	if ( ! is_array( $enabled ) ) {
+		return;
+	}
+
+	foreach ( array_keys( hpts_default_icons() ) as $key ) {
+		if ( in_array( $key, $enabled, true ) && hpts_icon_needs_fontawesome( hpts_signal_icon( $key ) ) ) {
+			hpts_enqueue_fontawesome();
+
+			return;
+		}
+	}
+}
+
+/**
  * Registers the settings tab.
  *
  * @param array<string, mixed> $settings Settings configuration.
@@ -234,6 +636,113 @@ function hpts_register_settings( $settings ) {
 	// natively and fall back to a plain text field on older versions. Our own
 	// Color class was removed in 1.5.3 to avoid the FQCN collision with core.
 	$color_type = class_exists( '\HivePress\Fields\Color' ) ? 'color' : 'text';
+
+	// Core's picker list plus the Font Awesome 6/7 additions. Passing
+	// `'options' => 'icons'` would hand the field to core's resolver
+	// (`components/class-form.php:85`), which returns the FA5-era config with
+	// no way in, so the same list is fetched and extended here; the
+	// data-template attribute set on each icon field below is what that
+	// resolver would have set, and is what keeps the select2 icon previews
+	// working.
+	$icon_options = (array) hivepress()->get_config( 'icons' );
+
+	foreach ( hpts_fa_extra_icons() as $icon_name ) {
+		$icon_options[ $icon_name ] = $icon_name;
+	}
+
+	foreach ( hpts_fa_brand_icons() as $icon_name ) {
+		/* translators: %s: the brand icon's name. */
+		$icon_options[ $icon_name ] = sprintf( __( '%s (brand)', 'hivepress-trust-signals' ), $icon_name );
+	}
+
+	ksort( $icon_options );
+
+	// A named blank option, because core's Select renders an unnamed blank as
+	// a bare em-dash that reads as "nothing chosen". Prepended after the sort
+	// so it stays first.
+	$icon_options = [ '' => __( 'Standard icon', 'hivepress-trust-signals' ) ] + $icon_options;
+
+	// One picker per signal, gated on the Show icons checkbox via core's
+	// native _parent show/hide.
+	$icon_labels = [
+		'verified'           => __( 'Verified icon', 'hivepress-trust-signals' ),
+		'member_since'       => __( 'Member since icon', 'hivepress-trust-signals' ),
+		'listings_count'     => __( 'Active listings icon', 'hivepress-trust-signals' ),
+		'rating'             => __( 'Rating icon', 'hivepress-trust-signals' ),
+		'favorites'          => __( 'Favourites icon', 'hivepress-trust-signals' ),
+		'completed_bookings' => __( 'Completed bookings icon', 'hivepress-trust-signals' ),
+		'response_time'      => __( 'Response time icon', 'hivepress-trust-signals' ),
+		'response_rate'      => __( 'Response rate icon', 'hivepress-trust-signals' ),
+		'last_active'        => __( 'Last active icon', 'hivepress-trust-signals' ),
+	];
+
+	$icon_fields = [
+		'trust_signals_icons' => [
+			'label'       => __( 'Show icons', 'hivepress-trust-signals' ),
+			// Without a caption the checkbox repeats its label beside the box
+			// (core falls back to the label).
+			'caption'     => __( 'Show an icon beside each signal', 'hivepress-trust-signals' ),
+			'description' => __( 'The standard icons use the Font Awesome set bundled with HivePress; newer and brand icons load a shared stylesheet automatically. If your site subsets or replaces Font Awesome, make sure the chosen glyphs are included.', 'hivepress-trust-signals' ),
+			'type'        => 'checkbox',
+			'_order'      => 10,
+		],
+	];
+
+	$icon_field_order = 20;
+
+	foreach ( hpts_default_icons() as $signal_key => $default_icon ) {
+		$icon_fields[ 'trust_signals_icon_' . $signal_key ] = [
+			'label'       => $icon_labels[ $signal_key ],
+			/* translators: %s: the standard icon's name. */
+			'description' => sprintf( __( 'The icon beside this signal. Standard: %s. Brand icons are marked in the list.', 'hivepress-trust-signals' ), $default_icon ),
+			'type'        => 'select',
+			'options'     => $icon_options,
+			'_parent'     => 'trust_signals_icons',
+			'_order'      => $icon_field_order,
+
+			'attributes'  => [
+				'data-template' => 'icon',
+			],
+		];
+
+		$icon_field_order += 10;
+	}
+
+	$icon_fields['trust_signals_icon_size'] = [
+		'label'       => __( 'Icon size (%)', 'hivepress-trust-signals' ),
+		'description' => __( 'Size as a percentage of the surrounding text, between 50 and 400. Leave blank for the standard size.', 'hivepress-trust-signals' ),
+		'placeholder' => '100',
+		'type'        => 'number',
+		'min_value'   => 50,
+		'max_value'   => 400,
+		'_parent'     => 'trust_signals_icons',
+		'_order'      => 110,
+	];
+
+	$icon_fields['trust_signals_icon_weight'] = [
+		'label'       => __( 'Icon weight', 'hivepress-trust-signals' ),
+		'description' => __( 'Draws a slightly heavier outline in the icon colour. Normal leaves the icon as the font draws it.', 'hivepress-trust-signals' ),
+		'type'        => 'select',
+		'_parent'     => 'trust_signals_icons',
+		'_order'      => 120,
+
+		// A named blank, for the same reason as the pickers above.
+		'options'     => [
+			''         => __( 'Normal', 'hivepress-trust-signals' ),
+			'semibold' => __( 'Semi-bold', 'hivepress-trust-signals' ),
+			'bold'     => __( 'Bold', 'hivepress-trust-signals' ),
+		],
+	];
+
+	$icon_fields['trust_signals_color_icon'] = [
+		'label'       => __( 'Icon colour', 'hivepress-trust-signals' ),
+		'description' => __( 'Click the swatch to change it, or use the Default button to restore the standard HivePress grey.', 'hivepress-trust-signals' ),
+		'type'        => $color_type,
+		'default'     => '#b5becf',
+		'attributes'  => [ 'data-default-color' => '#b5becf' ],
+		'_parent'     => 'trust_signals_icons',
+		'_order'      => 130,
+	];
 
 	$settings['trust_signals'] = [
 		'title'    => __( 'Trust Signals', 'hivepress-trust-signals' ),
@@ -270,7 +779,7 @@ function hpts_register_settings( $settings ) {
 
 					'trust_signals_order_listing'   => [
 						'label'       => __( 'Listing page sidebar order', 'hivepress-trust-signals' ),
-						'description' => __( 'Sets where the block appears among the other sidebar elements on listing pages. A lower number places it higher on the page; a higher number places it lower down. Default: 15.', 'hivepress-trust-signals' ),
+						'description' => __( 'Position among the other sidebar elements on listing pages; a lower number sits higher up. Default: 15.', 'hivepress-trust-signals' ),
 						'type'        => 'number',
 						'min_value'   => 1,
 						'max_value'   => 100,
@@ -280,7 +789,7 @@ function hpts_register_settings( $settings ) {
 
 					'trust_signals_order_vendor'    => [
 						'label'       => __( 'Vendor page sidebar order', 'hivepress-trust-signals' ),
-						'description' => __( 'Sets where the block appears among the other sidebar elements on vendor profile pages. A lower number places it higher on the page; a higher number places it lower down. Default: 25.', 'hivepress-trust-signals' ),
+						'description' => __( 'Position among the other sidebar elements on vendor profile pages; a lower number sits higher up. Default: 25.', 'hivepress-trust-signals' ),
 						'type'        => 'number',
 						'min_value'   => 1,
 						'max_value'   => 100,
@@ -314,31 +823,12 @@ function hpts_register_settings( $settings ) {
 						],
 					],
 
-					'trust_signals_icons'           => [
-						'label'       => __( 'Show icons', 'hivepress-trust-signals' ),
-						// Without a caption the checkbox repeats its label
-						// beside the box (core falls back to the label).
-						'caption'     => __( 'Show an icon beside each signal', 'hivepress-trust-signals' ),
-						'description' => __( 'Uses the Font Awesome 5 solid icons bundled with HivePress core. If your site subsets or replaces Font Awesome, make sure the required glyphs are included.', 'hivepress-trust-signals' ),
-						'type'        => 'checkbox',
-						'_order'      => 40,
-					],
-
 					'trust_signals_card'            => [
 						'label'   => __( 'Card style', 'hivepress-trust-signals' ),
 						'caption' => __( 'Add border, shadow and padding (matches HivePress theme sidebar widgets)', 'hivepress-trust-signals' ),
 						'type'    => 'checkbox',
 						'default' => true,
 						'_order'  => 50,
-					],
-
-					'trust_signals_color_icon'      => [
-						'label'       => __( 'Icon colour', 'hivepress-trust-signals' ),
-						'description' => __( 'Colours use the HivePress grey palette by default. Click a swatch to change it or use the Default button to restore it.', 'hivepress-trust-signals' ),
-						'type'        => $color_type,
-						'default'     => '#b5becf',
-						'attributes'  => [ 'data-default-color' => '#b5becf' ],
-						'_order'      => 60,
 					],
 
 					'trust_signals_color_pill_bg'   => [
@@ -362,22 +852,30 @@ function hpts_register_settings( $settings ) {
 					'trust_signals_schema'          => [
 						'label'       => __( 'Rating schema markup', 'hivepress-trust-signals' ),
 						'caption'     => __( 'Output LocalBusiness AggregateRating JSON-LD on vendor pages', 'hivepress-trust-signals' ),
-						'description' => __( 'Leave disabled if another plugin already outputs rating structured data for vendors - the HivePress SEO extension does this automatically - as duplicates can cause Search Console warnings.', 'hivepress-trust-signals' ),
+						'description' => __( 'Leave disabled if another plugin already outputs vendor rating structured data (the HivePress SEO extension does), as duplicates can cause Search Console warnings.', 'hivepress-trust-signals' ),
 						'type'        => 'checkbox',
 						'_order'      => 90,
 					],
 				],
 			],
 
+			'icons'   => [
+				'title'       => __( 'Icons', 'hivepress-trust-signals' ),
+				'description' => __( 'Choose the icon shown beside each signal and how the set is drawn. These options apply only while Show icons is ticked.', 'hivepress-trust-signals' ),
+				'_order'      => 15,
+
+				'fields'      => $icon_fields,
+			],
+
 			'signals' => [
 				'title'       => __( 'Signals', 'hivepress-trust-signals' ),
-				'description' => __( 'Choose which signals appear in the block and tune the thresholds for the response statistics. A signal is shown only when its data exists, so an enabled signal can still be hidden on some pages.', 'hivepress-trust-signals' ),
+				'description' => __( 'Choose which signals appear and tune the response statistics thresholds. A signal only shows when its data exists, so an enabled signal can still be hidden on some pages.', 'hivepress-trust-signals' ),
 				'_order'      => 20,
 
 				'fields'      => [
 					'trust_signals_items'             => [
 						'label'       => __( 'Enabled signals', 'hivepress-trust-signals' ),
-						'description' => __( 'Signals that depend on an extension are hidden automatically if that extension is inactive or there is not enough data. Response time and rate thresholds are configurable below. Signals are omitted rather than estimated.', 'hivepress-trust-signals' ),
+						'description' => __( 'A signal is hidden automatically when its extension is inactive or there is not enough data - omitted rather than estimated. The response thresholds are set below.', 'hivepress-trust-signals' ),
 						'type'        => 'checkboxes',
 						'default'     => hpts_default_signals(),
 						'options'     => hpts_signal_options(),
@@ -386,7 +884,7 @@ function hpts_register_settings( $settings ) {
 
 					'trust_signals_grace_hours'       => [
 						'label'       => __( 'Response rate grace period (hours)', 'hivepress-trust-signals' ),
-						'description' => __( 'Conversations opened within this many hours are left out of the response rate, so a brand-new unanswered message does not lower a vendor\'s rate before they have had a fair chance to reply. Default: 48.', 'hivepress-trust-signals' ),
+						'description' => __( 'Conversations newer than this are left out of the response rate, so a brand-new unanswered message does not lower a vendor\'s rate unfairly. Default: 48.', 'hivepress-trust-signals' ),
 						'type'        => 'number',
 						'min_value'   => 0,
 						'max_value'   => 720,
@@ -396,7 +894,7 @@ function hpts_register_settings( $settings ) {
 
 					'trust_signals_rate_min'          => [
 						'label'       => __( 'Minimum response rate to display (%)', 'hivepress-trust-signals' ),
-						'description' => __( 'The response rate is only shown when it is at least this percentage, so a low rate is not advertised on the vendor\'s own page. Set to 0 to always show it. Default: 80.', 'hivepress-trust-signals' ),
+						'description' => __( 'The response rate is only shown at or above this percentage, so a low rate is never advertised. Set to 0 to always show it. Default: 80.', 'hivepress-trust-signals' ),
 						'type'        => 'number',
 						'min_value'   => 0,
 						'max_value'   => 100,
@@ -406,7 +904,7 @@ function hpts_register_settings( $settings ) {
 
 					'trust_signals_response_max_days' => [
 						'label'       => __( 'Slowest response time to display (days)', 'hivepress-trust-signals' ),
-						'description' => __( 'The response time signal is hidden entirely when a vendor\'s typical first reply is slower than this many days. The displayed wording always comes from the true value (within an hour, a day, a few days, a week, two weeks, a month), so whatever is shown reads true at any setting. Default: 3.', 'hivepress-trust-signals' ),
+						'description' => __( 'Hides the response time signal when a vendor\'s typical first reply is slower than this many days. The displayed wording always comes from the true value, so it reads true at any setting. Default: 3.', 'hivepress-trust-signals' ),
 						'type'        => 'number',
 						'min_value'   => 1,
 						'max_value'   => 30,
@@ -434,7 +932,7 @@ function hpts_register_settings( $settings ) {
 				// shipping an uninstall.php, whatever that file actually does
 				// (wp-admin/plugins.php:376-380), and a site owner reading it has no way to
 				// tell that it does not apply here.
-				'description' => __( 'Your settings and the activity figures built up for each vendor are kept if you delete this plugin, so you can reinstall it and carry on. WordPress shows its own warning on the delete screen saying the data goes too, but that warning is the same for every plugin and does not apply here unless you tick the box below. Switching the plugin off never removes anything.', 'hivepress-trust-signals' ),
+				'description' => __( 'Deleting this plugin keeps your settings and each vendor\'s accumulated activity figures, so a reinstall carries on where it left off. WordPress\'s own delete-screen warning about data loss is generic and does not apply unless you tick the box below. Switching the plugin off never removes anything.', 'hivepress-trust-signals' ),
 				'_order'      => 30,
 
 				'fields'      => [
@@ -446,7 +944,7 @@ function hpts_register_settings( $settings ) {
 						// something irreversible that nothing will confirm at the time. The completed
 						// bookings counter is called out separately because it only ever counts up and
 						// cannot be rebuilt from anything else once it is gone.
-						'description' => __( 'Leave this unticked unless you are certain. With it ticked, deleting the plugin also removes every setting on this page, each vendor\'s completed bookings total, and the last-active times used for the response figures. The completed bookings total only ever counts up and cannot be rebuilt afterwards. It cannot be undone and nothing asks you to confirm at the time, so copy down anything you want to keep first. Deleting the plugin with this unticked keeps all of it.', 'hivepress-trust-signals' ),
+						'description' => __( 'With this ticked, deleting the plugin also removes every setting on this page, each vendor\'s completed bookings total and the recorded last-active times. The bookings total only ever counts up and cannot be rebuilt, and nothing asks you to confirm at the time. Leave it unticked to keep everything.', 'hivepress-trust-signals' ),
 						'type'        => 'checkbox',
 						'_order'      => 10,
 					],
@@ -685,9 +1183,17 @@ function hpts_render_block() {
 		$icon = '';
 
 		if ( $icons && ! empty( $signal['icon'] ) ) {
-			// Icon classes verified against the Font Awesome 5.13.1 solid set
-			// bundled and enqueued site-wide by HivePress core.
-			$icon = '<i class="fas fa-' . esc_attr( $signal['icon'] ) . '" aria-hidden="true"></i>';
+			// The standard icons are verified against the Font Awesome 5.13.1
+			// solid set bundled and enqueued site-wide by HivePress core;
+			// newer and brand choices carry their own classes and stylesheet.
+			$icon = '<i class="hpts-icon ' . esc_attr( hpts_icon_class( $signal['icon'] ) ) . '" aria-hidden="true"></i>';
+
+			// Fallback for setups where the head-time enqueue could not
+			// resolve the page context: enqueued here, the stylesheet still
+			// prints in the footer and the icons render.
+			if ( hpts_icon_needs_fontawesome( $signal['icon'] ) ) {
+				hpts_enqueue_fontawesome();
+			}
 		}
 
 		$output .= '<li class="hpts-item hpts-item--' . esc_attr( $signal['key'] ) . '">';
@@ -850,11 +1356,28 @@ function hpts_inline_css() {
 	$pill_bg    = $pill_bg ? $pill_bg : '#eaecf0';
 	$pill_text  = $pill_text ? $pill_text : '#4a5568';
 
+	// Icon size (percentage of the surrounding text) and weight. Out-of-range
+	// or non-numeric stored values fall back to the standard size.
+	$icon_size = hpts_get_number_option( 'trust_signals_icon_size', 100 );
+	$icon_size = ( $icon_size >= 50 && $icon_size <= 400 ) ? $icon_size : 100;
+
+	// The stroke is drawn in currentColor, so it always follows the icon
+	// colour; paint-order keeps the fill on top so the glyph is thickened
+	// rather than outlined.
+	$icon_weight = hpts_get_option( 'trust_signals_icon_weight', '' );
+	$icon_stroke = '';
+
+	if ( 'semibold' === $icon_weight ) {
+		$icon_stroke = '-webkit-text-stroke:0.3px currentColor;paint-order:stroke fill;';
+	} elseif ( 'bold' === $icon_weight ) {
+		$icon_stroke = '-webkit-text-stroke:0.5px currentColor;paint-order:stroke fill;';
+	}
+
 	$css = '.hpts-block .hpts-list{list-style:none;margin:0;padding:0}'
 		// Centered title fallback; content-title--center handles HivePress themes.
 		. '.hpts-block__title{margin:0 0 1.25rem;text-align:center}'
 		// Fixed icon metrics so pills with and without icons match in height.
-		. '.hpts-block .fas{color:' . $icon_color . ';font-size:1em;line-height:1;flex:0 0 auto}'
+		. '.hpts-block .hpts-icon{color:' . $icon_color . ';font-size:' . $icon_size . '%;line-height:1;flex:0 0 auto;' . $icon_stroke . '}'
 		// Card fallback: exact HivePress theme sidebar-widget values, applied
 		// only when the theme does not style .widget--sidebar itself.
 		. '.hpts-block--card{padding:2rem;border:1px solid rgba(7,36,86,.075);border-radius:3px;box-shadow:0 2px 4px 0 rgba(7,36,86,.075);background-color:#fff}'
@@ -863,7 +1386,7 @@ function hpts_inline_css() {
 		. '.hpts-block--rows .hpts-item:last-child{border-bottom:none;padding-bottom:0}'
 		. '.hpts-block--rows .hpts-item:first-child{padding-top:0}'
 		. '.hpts-block--rows .hpts-item__label-text{opacity:.7}'
-		. '.hpts-block--rows .hpts-item__label .fas{margin-right:.45em}'
+		. '.hpts-block--rows .hpts-item__label .hpts-icon{margin-right:.45em}'
 		. '.hpts-block--rows .hpts-item__value{font-weight:600;text-align:right}'
 		// Pill style: uniform thickness via min-height and fixed line-height.
 		. '.hpts-block--pills .hpts-list{display:flex;gap:.5rem}'
@@ -919,7 +1442,7 @@ function hpts_collect_signals( $vendor_id, $listing_id = 0 ) {
 		} else {
 			$signals[] = [
 				'key'   => 'verified',
-				'icon'  => 'check-circle',
+				'icon'  => hpts_signal_icon( 'verified' ),
 				'label' => __( 'Verified', 'hivepress-trust-signals' ),
 				'value' => __( 'Yes', 'hivepress-trust-signals' ),
 				'pill'  => __( 'Verified', 'hivepress-trust-signals' ),
@@ -937,7 +1460,7 @@ function hpts_collect_signals( $vendor_id, $listing_id = 0 ) {
 
 			$signals[] = [
 				'key'   => 'member_since',
-				'icon'  => 'calendar-alt',
+				'icon'  => hpts_signal_icon( 'member_since' ),
 				'label' => __( 'Member since', 'hivepress-trust-signals' ),
 				'value' => $member_since,
 				'pill'  => sprintf(
@@ -957,7 +1480,7 @@ function hpts_collect_signals( $vendor_id, $listing_id = 0 ) {
 	if ( in_array( 'listings_count', $enabled, true ) && isset( $cached['listings'] ) && $cached['listings'] > 0 ) {
 		$signals[] = [
 			'key'   => 'listings_count',
-			'icon'  => 'th-list',
+			'icon'  => hpts_signal_icon( 'listings_count' ),
 			'label' => __( 'Active listings', 'hivepress-trust-signals' ),
 			'value' => number_format_i18n( $cached['listings'] ),
 			'pill'  => sprintf(
@@ -990,7 +1513,7 @@ function hpts_collect_signals( $vendor_id, $listing_id = 0 ) {
 
 			$signals[] = [
 				'key'   => 'rating',
-				'icon'  => 'star',
+				'icon'  => hpts_signal_icon( 'rating' ),
 				'label' => __( 'Rating', 'hivepress-trust-signals' ),
 				'value' => $rating_text,
 				'pill'  => $rating_text,
@@ -1013,7 +1536,7 @@ function hpts_collect_signals( $vendor_id, $listing_id = 0 ) {
 		} else {
 			$signals[] = [
 				'key'   => 'favorites',
-				'icon'  => 'heart',
+				'icon'  => hpts_signal_icon( 'favorites' ),
 				'label' => $listing_id
 					? __( 'Saved as favourite', 'hivepress-trust-signals' )
 					: __( 'Favourites received', 'hivepress-trust-signals' ),
@@ -1043,7 +1566,7 @@ function hpts_collect_signals( $vendor_id, $listing_id = 0 ) {
 	if ( in_array( 'completed_bookings', $enabled, true ) && isset( $cached['bookings'] ) && $cached['bookings'] > 0 ) {
 		$signals[] = [
 			'key'   => 'completed_bookings',
-			'icon'  => 'calendar-check',
+			'icon'  => hpts_signal_icon( 'completed_bookings' ),
 			'label' => __( 'Completed bookings', 'hivepress-trust-signals' ),
 			'value' => number_format_i18n( $cached['bookings'] ),
 			'pill'  => sprintf(
@@ -1082,7 +1605,7 @@ function hpts_collect_signals( $vendor_id, $listing_id = 0 ) {
 			} else {
 				$signals[] = [
 					'key'   => 'response_time',
-					'icon'  => 'clock',
+					'icon'  => hpts_signal_icon( 'response_time' ),
 					'label' => __( 'Typically replies', 'hivepress-trust-signals' ),
 					'value' => $bucket,
 					'pill'  => sprintf(
@@ -1104,7 +1627,7 @@ function hpts_collect_signals( $vendor_id, $listing_id = 0 ) {
 			} else {
 				$signals[] = [
 					'key'   => 'response_rate',
-					'icon'  => 'reply',
+					'icon'  => hpts_signal_icon( 'response_rate' ),
 					'label' => __( 'Response rate', 'hivepress-trust-signals' ),
 					'value' => $response['rate'] . '%',
 					'pill'  => sprintf(
@@ -1141,7 +1664,7 @@ function hpts_collect_signals( $vendor_id, $listing_id = 0 ) {
 			if ( $label ) {
 				$signals[] = [
 					'key'   => 'last_active',
-					'icon'  => 'bolt',
+					'icon'  => hpts_signal_icon( 'last_active' ),
 					'label' => __( 'Activity', 'hivepress-trust-signals' ),
 					'value' => $label,
 					'pill'  => $label,
@@ -1324,11 +1847,13 @@ function hpts_count_favorites( $listing_ids ) {
 
 	return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB -- source-verified hp_ schema; caching by design at the transient layer.
 		// The IN() list is built purely of %d placeholders, one per ID; the
-		// sniff cannot see placeholders through the interpolated variable.
+		// sniff cannot see placeholders through the interpolated variable, so
+		// its three related codes (wrong replacement count, interpolation, and
+		// "no placeholders found") are all the same false positive here.
 		$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 			"SELECT COUNT(*) FROM {$wpdb->comments}
 			 WHERE comment_type = 'hp_favorite'
-			 AND comment_post_ID IN ( $placeholders )", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			 AND comment_post_ID IN ( $placeholders )", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 			$listing_ids
 		)
 	);
