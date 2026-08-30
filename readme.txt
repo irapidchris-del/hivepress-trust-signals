@@ -30,17 +30,16 @@ Updates are delivered straight from the plugin's public GitHub repository: when 
 * Changed: internal formatting only. Some explanatory comments in the settings screen's script were reworded to match the wording used across the rest of these extensions, so the file is easier to compare with its siblings. Nothing about the settings screen, or anything else the plugin does, has changed.
 
 = 1.8.2 =
-* Changed: the settings screen now carries the same furniture as every other extension in this family. The jump links are labelled "Jump to a section:" and stay with you as you scroll, a Save Changes tab sits on the right edge of the screen wherever you are on the page, and a button in the bottom corner takes you back to the top. If you have another of these extensions installed and it has already put one of those on the screen, this plugin leaves it alone, so you always see one of each rather than two.
-* Fixed: links and bookmarks pointing at a particular settings section keep working. The quick links used to give every section heading a new name of its own, which quietly broke any link to the name WordPress had already given it.
-* Fixed: the settings screen is now found correctly when you reach it from the plain HivePress Settings menu item rather than from the Trust Signals tab link. On a site where Trust Signals is the first tab, that route used to leave the screen without its colour pickers.
+* Changed: the settings screen now carries the same furniture as every other extension in this family. The jump links are labelled "Jump to a section:" and stay with you as you scroll, a Save Changes tab sits on the right edge of the screen wherever you are on the page, and a button in the bottom corner takes you back to the top. If you have another of these extensions installed and it has already put one of those on the screen, this plugin leaves it alone, so you always see one of each rather than two. The quick links reuse the names WordPress already gives the section headings, so a link or a bookmark to a section keeps working.
+* Changed: the colour pickers and the settings-screen styling are now loaded on the Trust Signals tab alone rather than on every HivePress settings tab, and the tab is recognised however you reach it, including from the plain HivePress > Settings menu link.
 
 = 1.8.1 =
-* Changed: the icon library is now included with the plugin instead of being loaded from a third-party server, which is faster and keeps requests on your own site.
-* Changed: outline icon styles now render as outlines. An icon set to an outline style previously appeared filled in, because only the solid style was included with the plugin and your browser quietly used that instead.
+* Changed: the icons ship inside the plugin rather than being fetched from a third-party server, so every request stays on your own site and the icons draw with the rest of the page.
+* Changed: the bundled icon set is the complete free one, so an icon can never be drawn in the wrong style. Nothing you can pick in the settings looked wrong before this.
 
 = 1.8.0 =
 * Added: the icon beside each signal can now be chosen, from HivePress's own icon list plus a set of newer Font Awesome and brand icons. The standard icons are unchanged, and newer choices load one shared stylesheet automatically - on pages where they actually render, and only if no other plugin from the same author has loaded it already.
-* Added: icon size (as a percentage of the surrounding text) and icon weight (Normal, Semi-bold or Bold) settings. All icon options live in a new Icons section and appear only while Show icons is ticked.
+* Added: icon size (as a percentage of the surrounding text) and icon weight (Normal, Semi-bold or Bold) settings. All icon options live in a new Icons section and appear only while Show icons is ticked, so Show icons and the existing Icon colour setting have moved there from General.
 * Added: quick links at the top of the settings tab that jump to each section, with dividers between the sections, so the tab is no longer one long undifferentiated scroll.
 * Improved: settings descriptions are shorter and easier to scan, section descriptions wrap at a readable width on wide screens, and the tooltips are wider than the narrow column WordPress gives them.
 
