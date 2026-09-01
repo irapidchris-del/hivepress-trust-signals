@@ -4,7 +4,7 @@ Tags: hivepress, marketplace, trust, reviews, bookings
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.8.3
+Stable tag: 1.8.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,6 +25,17 @@ Translation-ready: all strings use the hivepress-trust-signals text domain, with
 Updates are delivered straight from the plugin's public GitHub repository: when a new release is published there, the update appears in Dashboard > Updates and on the Plugins screen just like any other plugin, and can be installed with one click.
 
 == Changelog ==
+
+= 1.8.10 =
+* Changed: icons are now drawn directly into the page instead of being loaded as a font. A
+  visitor's browser no longer downloads roughly 230 KB of stylesheet and font files just to show
+  a few small pictures, and the icons can no longer clash with the icon font HivePress loads
+  itself. Your colour and size settings work exactly as before.
+* Added: every icon in the free Font Awesome 7 set is now available, brand icons included, which
+  is around 800 more than before. Type a few letters to find one rather than scrolling a long
+  list, and each result still shows you the icon itself.
+* Changed: the settings screen loads a great deal faster, because the icon choices are fetched as
+  you search instead of every one of them being written into the page.
 
 = 1.8.3 =
 * Changed: internal formatting only. Some explanatory comments in the settings screen's script were reworded to match the wording used across the rest of these extensions, so the file is easier to compare with its siblings. Nothing about the settings screen, or anything else the plugin does, has changed.

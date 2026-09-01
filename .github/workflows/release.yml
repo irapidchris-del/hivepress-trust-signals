@@ -26,7 +26,7 @@ jobs:
         run: |
           mkdir -p build/hivepress-trust-signals
           cp hivepress-trust-signals.php uninstall.php readme.txt build/hivepress-trust-signals/
-          cp -r assets languages build/hivepress-trust-signals/
+          cp -r includes assets languages build/hivepress-trust-signals/
           cd build
           zip -r hivepress-trust-signals.zip hivepress-trust-signals
 

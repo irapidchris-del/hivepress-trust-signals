@@ -3,7 +3,7 @@
  * Plugin Name: Trust Signals for HivePress
  * Plugin URI: https://github.com/irapidchris-del/hivepress-trust-signals
  * Description: Surfaces verifiable trust and activity data (response time, completed bookings, reviews, favourites and more) in a sidebar block on HivePress listing and vendor pages.
- * Version: 1.8.3
+ * Version: 1.8.10
  * Author: ChrisB @ HivePress Community
  * Author URI: https://community.hivepress.io/u/chrisb/summary
  * Update URI: https://github.com/irapidchris-del/hivepress-trust-signals
@@ -34,7 +34,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HPTS_VERSION', '1.8.3' );
+define( 'HPTS_VERSION', '1.8.10' );
 define( 'HPTS_CACHE_TTL', 12 * HOUR_IN_SECONDS );
 define( 'HPTS_MSG_ROW_LIMIT', 20000 );
 
@@ -47,34 +47,58 @@ define( 'HPTS_SUPPORT_URL', 'https://ko-fi.com/chrisbathivepresscommunity' );
 
 /*
 --------------------------------------------------------------------------
-Shared Font Awesome stylesheet.
+Font Awesome.
 
-HivePress core bundles and enqueues Font Awesome 5 SOLID only, so icon
-names introduced in Font Awesome 6/7 and every brand icon render blank
-unless a fuller build is loaded. The handle is shared across this author's
-plugins on purpose: each one registers it only if no other already has, so
-one copy serves however many are active.
+HivePress core bundles and enqueues Font Awesome 5 SOLID only, so icon names
+introduced in Font Awesome 6/7 and every brand icon render blank unless a
+fuller build is loaded.
 
-HPTS_FA_PATH is a path relative to the plugin root, not a URL, because
-plugin_dir_url() is a function call and cannot be used at define() time here.
-It is joined to the plugin URL in hpts_enqueue_fontawesome(), which explains
-why a CDN address must never go back in its place. This constant held the
-cdnjs URL until 2026-08-30; because it is a plain define() rather than an
-enqueue argument, Plugin Check flagged it as Offloading.OffloadedContent
+Since 2026-09-01 that is FAFH's job, not this plugin's. The front end draws
+inline SVG (no stylesheet, no webfont, nothing for core's Font Awesome 5 to
+collide with) and the webfont ships inside includes/fafh/ for the wp-admin
+picker previews alone. The plugin's own assets/vendor/fontawesome/ copy was
+deleted in the same change.
+
+These two constants remain only because the handle is shared with sibling
+plugins and third-party code may test for it. FAFH::FONT_HANDLE is the value
+that matters; keep them in step. A CDN address must never go back in here:
+Plugin Check reports a plain define() holding one as Offloading.OffloadedContent
 rather than EnqueuedResourceOffloading, so a grep for the Enqueued code alone
-misses it.
+misses it -- which is how the cdnjs URL survived here until 2026-08-30.
 --------------------------------------------------------------------------
 */
 
-define( 'HPTS_FA_HANDLE', 'freestylr-fontawesome' );
-define( 'HPTS_FA_VERSION', '7.1.0' );
-define( 'HPTS_FA_PATH', 'assets/vendor/fontawesome/css/all.min.css' );
+/*
+ * HPTS_FA_HANDLE and HPTS_FA_VERSION were removed on 2026-09-01. They named a
+ * bundled Font Awesome webfont that no longer exists: FAFH 1.2.0 replaced it
+ * with an admin shim that converts a picker's <i class="fas fa-star"> into
+ * inline SVG, so no plugin carries 315 KB of font any more. Do not reinstate
+ * them -- nothing registers that handle, and a define() naming a deleted file
+ * only sends the next reader looking for it.
+ */
 
 /*
 --------------------------------------------------------------------------
 Bootstrap.
 --------------------------------------------------------------------------
 */
+
+/*
+ * FAFH (Font Awesome For HivePress) -- the shared icon library, BUNDLED in
+ * includes/fafh/ rather than installed separately, so this plugin still works
+ * on its own. When sibling plugins are active they all register their copy and
+ * the highest version runs; see includes/fafh/class-fafh-loader.php.
+ *
+ * It supplies every Font Awesome 7.1.0 Free icon (1,918 of them, brands
+ * included) to the picker, and renders the chosen icon as inline SVG on the
+ * front end. That is why this plugin no longer carries its own
+ * assets/vendor/fontawesome/ copy: the webfont moved inside the library and is
+ * now only loaded in wp-admin, for the picker previews.
+ *
+ * Never edit includes/fafh/ in place. Edit tools/fafh/ and run
+ * tools\sync-fafh.ps1, which keeps every copy byte-identical.
+ */
+require_once __DIR__ . '/includes/fafh/bootstrap.php';
 
 add_action( 'plugins_loaded', 'hpts_init' );
 
@@ -539,6 +563,38 @@ function hpts_icon_class( $icon ) {
 }
 
 /**
+ * Gets the front-end markup for a signal's icon.
+ *
+ * Prefers FAFH's inline SVG: it costs a few hundred bytes instead of a ~234 KB
+ * stylesheet-and-webfont download, draws Font Awesome 7 glyphs even though
+ * HivePress core enqueues Font Awesome 5, and cannot collide with core's
+ * stylesheet because there is no font class for core to match.
+ *
+ * Falls back to the old class-based markup if FAFH is somehow unavailable, so
+ * a broken include degrades to the previous behaviour rather than to nothing.
+ *
+ * @param string $icon Icon name.
+ * @return string
+ */
+function hpts_icon_markup( $icon ) {
+	if ( ! $icon ) {
+		return '';
+	}
+
+	if ( class_exists( 'FAFH' ) ) {
+		$svg = FAFH::svg( $icon );
+
+		if ( $svg ) {
+			return '<i class="hpts-icon fafh-icon">' . $svg . '</i>';
+		}
+	}
+
+	hpts_enqueue_fontawesome();
+
+	return '<i class="hpts-icon ' . esc_attr( hpts_icon_class( $icon ) ) . '" aria-hidden="true"></i>';
+}
+
+/**
  * Whether an icon needs the shared Font Awesome stylesheet (anything beyond
  * the Font Awesome 5 solid set core already loads).
  *
@@ -556,56 +612,36 @@ function hpts_icon_needs_fontawesome( $icon ) {
  * @return void
  */
 function hpts_enqueue_fontawesome() {
-	if ( ! wp_style_is( HPTS_FA_HANDLE, 'registered' ) ) {
-		/*
-		 * Font Awesome 7.1.0 Free is BUNDLED, in assets/vendor/fontawesome/. Never
-		 * point this at cdnjs or any other CDN. A convenience CDN copy of a library
-		 * is the exact case the offloaded-assets rule exists to catch
-		 * (resources/security-standards.md, "Offloaded assets" - a remote asset is
-		 * only acceptable when it is a service's own required SDK from that
-		 * service's own domain), Plugin Check reported an offloading error on every
-		 * plugin that did it, and Chris ruled on 2026-08-30 that the files ship with
-		 * the plugin. A comment here used to say the finding was expected and told
-		 * future sessions to leave it; that was wrong. It is also faster: cache
-		 * partitioning (Chrome 86+, Firefox, Safari) means a CDN copy is a cold
-		 * download for every site anyway, plus a DNS lookup and TLS handshake to a
-		 * third origin.
-		 *
-		 * Layout matters. assets/vendor/fontawesome/css/all.min.css sits beside
-		 * assets/vendor/fontawesome/webfonts/, so the stock "../webfonts/" paths
-		 * inside the upstream CSS resolve unchanged. Three faces ship -
-		 * fa-solid-900.woff2, fa-brands-400.woff2 and fa-regular-400.woff2 - and
-		 * only the v4-compatibility @font-face block was removed from the CSS, so
-		 * nothing can request a file that is not there. The regular face is NOT
-		 * optional, and it costs ~19 KB: with no weight-400 face declared the
-		 * browser silently substitutes the weight-900 solid one, so a far /
-		 * fa-regular name draws a FILLED glyph instead of an outline. That shipped
-		 * between 2026-08-29 and 2026-08-30 and read as somebody picking the wrong
-		 * icon rather than as a missing font, which is why it survived a whole day.
-		 *
-		 * Pinned to 7.1.0, and every plugin sharing this handle must pin the
-		 * identical version, because only the first registration of a shared handle
-		 * wins. Verified 2026-08-29 against the 7.1.0 stylesheet: it keeps the
-		 * fas/fab alias classes and the Font Awesome 5 names, so the standard icons
-		 * render identically whichever stylesheet wins. Full rule:
-		 * resources/hivepress-ui.md, "FA6/7 and brand icons: bundle them, never load
-		 * a CDN copy (2026-08-30)".
-		 */
-		wp_register_style( HPTS_FA_HANDLE, plugin_dir_url( __FILE__ ) . HPTS_FA_PATH, [], HPTS_FA_VERSION );
+	// The webfont now lives inside FAFH and is only wanted in wp-admin, for
+	// the picker previews; the front end draws inline SVG instead. FAFH also
+	// loads the sheet that makes brand icons preview correctly, which core
+	// cannot do on its own (its option template hardcodes the solid family).
+	//
+	// Still BUNDLED, never a CDN: a convenience CDN copy is exactly what the
+	// offloaded-assets rule catches (resources/security-standards.md), Plugin
+	// Check errors on it, and cache partitioning means it is not even faster.
+	if ( class_exists( 'FAFH' ) ) {
+		FAFH::enqueue_admin();
 	}
-
-	wp_enqueue_style( HPTS_FA_HANDLE );
 }
 
 /**
- * Enqueues the shared stylesheet in the head of listing and vendor pages when
- * an enabled signal uses an icon that needs it. The render callback enqueues
- * it again as a fallback (printed in the footer), so an unusual setup where
- * the context is not resolvable this early still renders its icons.
+ * Enqueues the webfont in the head of listing and vendor pages, in the one
+ * case that still needs it.
+ *
+ * Normally nothing happens: hpts_icon_markup() draws inline SVG and the front
+ * end loads no icon font at all. This only fires if FAFH is unavailable, when
+ * the plugin falls back to class-based markup that does need the stylesheet.
+ * The render callback enqueues it again as a footer-printed backstop, for a
+ * setup where the page context cannot be resolved this early.
  *
  * @return void
  */
 function hpts_maybe_enqueue_fontawesome() {
+	if ( class_exists( 'FAFH' ) ) {
+		return;
+	}
+
 	if ( ! hpts_get_option( 'trust_signals_icons', false ) || ! hpts_get_context() ) {
 		return;
 	}
@@ -638,29 +674,33 @@ function hpts_register_settings( $settings ) {
 	$color_type = class_exists( '\HivePress\Fields\Color' ) ? 'color' : 'text';
 
 	// Core's picker list plus the Font Awesome 6/7 additions. Passing
-	// `'options' => 'icons'` would hand the field to core's resolver
-	// (`components/class-form.php:85`), which returns the FA5-era config with
-	// no way in, so the same list is fetched and extended here; the
-	// data-template attribute set on each icon field below is what that
-	// resolver would have set, and is what keeps the select2 icon previews
-	// working.
-	$icon_options = (array) hivepress()->get_config( 'icons' );
-
-	foreach ( hpts_fa_extra_icons() as $icon_name ) {
-		$icon_options[ $icon_name ] = $icon_name;
-	}
-
-	foreach ( hpts_fa_brand_icons() as $icon_name ) {
-		/* translators: %s: the brand icon's name. */
-		$icon_options[ $icon_name ] = sprintf( __( '%s (brand)', 'hivepress-trust-signals' ), $icon_name );
-	}
-
-	ksort( $icon_options );
+	// Icon pickers load their options over AJAX from FAFH rather than printing
+	// them. All 1,918 Font Awesome 7.1.0 Free icons are reachable by typing;
+	// printing them inline made this one form 2 MB of HTML, nine pickers deep.
+	// FAFH::filter_field_options() puts the saved icon back so each control
+	// still shows what is currently chosen, and core's select2 template still
+	// renders a preview for every result.
+	//
+	// Without the library, fall back to core's own list printed inline: no
+	// source to search, so the options have to be there.
+	// 'icons' as a STRING, not the resolved array: with a source set, core reads
+	// this argument as a preset NAME and passes it to get_config(), which fatals
+	// on an array. FAFH's own filter then replaces core's resolved list with
+	// just the saved icon.
+	$icon_source  = class_exists( 'FAFH' ) ? FAFH::picker_source() : '';
+	$icon_options = $icon_source ? 'icons' : (array) hivepress()->get_config( 'icons' );
 
 	// A named blank option, because core's Select renders an unnamed blank as
 	// a bare em-dash that reads as "nothing chosen". Prepended after the sort
 	// so it stays first.
-	$icon_options = [ '' => __( 'Standard icon', 'hivepress-trust-signals' ) ] + $icon_options;
+	//
+	// Only when the options are a real array. With a source they are the string
+	// preset name core requires, and prepending to that is a fatal
+	// ("Unsupported operand types: array + string"). The sourced field carries a
+	// placeholder instead, which is what select2 shows when nothing is chosen.
+	if ( is_array( $icon_options ) ) {
+		$icon_options = [ '' => __( 'Standard icon', 'hivepress-trust-signals' ) ] + $icon_options;
+	}
 
 	// One picker per signal, gated on the Show icons checkbox via core's
 	// native _parent show/hide.
@@ -704,6 +744,13 @@ function hpts_register_settings( $settings ) {
 				'data-template' => 'icon',
 			],
 		];
+
+		if ( $icon_source ) {
+			$icon_fields[ 'trust_signals_icon_' . $signal_key ]['source'] = $icon_source;
+
+			// Stands in for the named blank option a sourced field cannot carry.
+			$icon_fields[ 'trust_signals_icon_' . $signal_key ]['placeholder'] = __( 'Standard icon', 'hivepress-trust-signals' );
+		}
 
 		$icon_field_order += 10;
 	}
@@ -1183,17 +1230,10 @@ function hpts_render_block() {
 		$icon = '';
 
 		if ( $icons && ! empty( $signal['icon'] ) ) {
-			// The standard icons are verified against the Font Awesome 5.13.1
-			// solid set bundled and enqueued site-wide by HivePress core;
-			// newer and brand choices carry their own classes and stylesheet.
-			$icon = '<i class="hpts-icon ' . esc_attr( hpts_icon_class( $signal['icon'] ) ) . '" aria-hidden="true"></i>';
-
-			// Fallback for setups where the head-time enqueue could not
-			// resolve the page context: enqueued here, the stylesheet still
-			// prints in the footer and the icons render.
-			if ( hpts_icon_needs_fontawesome( $signal['icon'] ) ) {
-				hpts_enqueue_fontawesome();
-			}
+			// Inline SVG through FAFH: no stylesheet and no webfont on the front
+			// end, and no fas/fa-solid class for core Font Awesome 5 to match and
+			// draw a second time through ::before.
+			$icon = hpts_icon_markup( $signal['icon'] );
 		}
 
 		$output .= '<li class="hpts-item hpts-item--' . esc_attr( $signal['key'] ) . '">';
@@ -1361,16 +1401,35 @@ function hpts_inline_css() {
 	$icon_size = hpts_get_number_option( 'trust_signals_icon_size', 100 );
 	$icon_size = ( $icon_size >= 50 && $icon_size <= 400 ) ? $icon_size : 100;
 
-	// The stroke is drawn in currentColor, so it always follows the icon
-	// colour; paint-order keeps the fill on top so the glyph is thickened
-	// rather than outlined.
+	/*
+	 * The stroke is drawn in currentColor, so it always follows the icon
+	 * colour; paint-order keeps the fill on top so the glyph is thickened
+	 * rather than outlined.
+	 *
+	 * TWO declarations, because there are two renderers. -webkit-text-stroke
+	 * thickens a FONT glyph and does nothing at all to an SVG; stroke and
+	 * stroke-width do the reverse. Both are inherited properties, so the
+	 * .hpts-icon wrapper carries them and whichever renderer drew the icon picks
+	 * its pair up.
+	 *
+	 * Since 2026-09-01 the icon is normally an inline SVG (FAFH), so the
+	 * -webkit-text-stroke half only matters on a site where the library failed
+	 * to load. Shipping only that half is what this plugin did between the FAFH
+	 * migration and 2026-09-01: the weight setting silently stopped doing
+	 * anything, with no error anywhere to say so.
+	 *
+	 * stroke-width is read in USER units unless the path carries
+	 * vector-effect="non-scaling-stroke" -- every Font Awesome viewBox is
+	 * "0 0 W 512", so 0.3px would otherwise mean 0.3/512 em and be invisible.
+	 * FAFH::svg() sets that attribute on every path it emits.
+	 */
 	$icon_weight = hpts_get_option( 'trust_signals_icon_weight', '' );
 	$icon_stroke = '';
 
 	if ( 'semibold' === $icon_weight ) {
-		$icon_stroke = '-webkit-text-stroke:0.3px currentColor;paint-order:stroke fill;';
+		$icon_stroke = '-webkit-text-stroke:0.3px currentColor;stroke:currentColor;stroke-width:0.3px;paint-order:stroke fill;';
 	} elseif ( 'bold' === $icon_weight ) {
-		$icon_stroke = '-webkit-text-stroke:0.5px currentColor;paint-order:stroke fill;';
+		$icon_stroke = '-webkit-text-stroke:0.5px currentColor;stroke:currentColor;stroke-width:0.5px;paint-order:stroke fill;';
 	}
 
 	$css = '.hpts-block .hpts-list{list-style:none;margin:0;padding:0}'
