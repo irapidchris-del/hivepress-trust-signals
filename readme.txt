@@ -4,7 +4,7 @@ Tags: hivepress, marketplace, trust, reviews, bookings
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.8.11
+Stable tag: 1.8.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,6 +25,12 @@ Translation-ready: all strings use the hivepress-trust-signals text domain, with
 Updates are delivered straight from the plugin's public GitHub repository: when a new release is published there, the update appears in Dashboard > Updates and on the Plugins screen just like any other plugin, and can be installed with one click.
 
 == Changelog ==
+
+= 1.8.12 =
+* New: a live preview to the right of the settings draws the block as it will appear in a sidebar,
+  with the style, signals, icons and colours on the page, following every change as you make it;
+  drag its edge to make it wider. The figures are examples, and nothing is stored until you press
+  Save Changes.
 
 = 1.8.11 =
 * Changed: the shared icon library is updated to the version that fixed two faults found in

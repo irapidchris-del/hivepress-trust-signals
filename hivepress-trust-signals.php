@@ -3,7 +3,7 @@
  * Plugin Name: Trust Signals for HivePress
  * Plugin URI: https://github.com/irapidchris-del/hivepress-trust-signals
  * Description: Surfaces verifiable trust and activity data (response time, completed bookings, reviews, favourites and more) in a sidebar block on HivePress listing and vendor pages.
- * Version: 1.8.11
+ * Version: 1.8.12
  * Author: ChrisB @ HivePress Community
  * Author URI: https://community.hivepress.io/u/chrisb/summary
  * Update URI: https://github.com/irapidchris-del/hivepress-trust-signals
@@ -34,7 +34,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HPTS_VERSION', '1.8.11' );
+define( 'HPTS_VERSION', '1.8.12' );
 define( 'HPTS_CACHE_TTL', 12 * HOUR_IN_SECONDS );
 define( 'HPTS_MSG_ROW_LIMIT', 20000 );
 
@@ -132,6 +132,11 @@ function hpts_init() {
 	// WordPress (Iris) colour picker, quick links and settings styling on the
 	// HivePress settings screen.
 	add_action( 'admin_enqueue_scripts', 'hpts_admin_scripts' );
+
+	// The live preview beside the settings. Priority 20: HivePress registers
+	// the tab's sections at 10, and the preview has to exist before they are
+	// drawn to be moved in front of them.
+	add_action( 'admin_init', 'hpts_register_preview_section', 20 );
 
 	// Shared Font Awesome stylesheet, only when a chosen icon needs it.
 	add_action( 'wp_enqueue_scripts', 'hpts_maybe_enqueue_fontawesome' );
@@ -358,6 +363,29 @@ function hpts_admin_scripts() {
 			],
 		]
 	);
+
+	// The live preview beside the settings. After the colour picker and the
+	// chrome, because it listens for the events both fire. The block's own
+	// rules are attached with this page's values as CSS variables, which the
+	// script sets on the block it draws.
+	wp_enqueue_style(
+		'hpts-preview',
+		$hpts_url . 'assets/css/admin-preview.css',
+		[ 'hpts-backend' ],
+		HPTS_VERSION . '.' . (int) filemtime( $hpts_dir . 'assets/css/admin-preview.css' )
+	);
+
+	wp_add_inline_style( 'hpts-preview', hpts_css_rules( 'var(--hpts-icon-color)', 'var(--hpts-pill-bg)', 'var(--hpts-pill-text)', 'var(--hpts-icon-size)', '' ) );
+
+	wp_enqueue_script(
+		'hpts-preview',
+		$hpts_url . 'assets/js/admin-preview.js',
+		[ 'jquery', 'wp-color-picker', 'hpts-backend' ],
+		HPTS_VERSION . '.' . (int) filemtime( $hpts_dir . 'assets/js/admin-preview.js' ),
+		true
+	);
+
+	wp_localize_script( 'hpts-preview', 'hptsPreviewData', hpts_preview_data() );
 
 	// The per-icon font-family rules below still have to be generated, because
 	// they are built from the icon lists rather than written out, so they stay
@@ -1432,11 +1460,27 @@ function hpts_inline_css() {
 		$icon_stroke = '-webkit-text-stroke:0.5px currentColor;stroke:currentColor;stroke-width:0.5px;paint-order:stroke fill;';
 	}
 
+	return '<style id="hpts-css">' . hpts_css_rules( $icon_color, $pill_bg, $pill_text, $icon_size . '%', $icon_stroke ) . '</style>';
+}
+
+/**
+ * The block's rules with the given values in place. Shared by the front end,
+ * which passes the saved colours, and the settings-screen preview, which
+ * passes CSS variables and sets them from the form as it changes.
+ *
+ * @param string $icon_color  Icon colour.
+ * @param string $pill_bg     Pill background colour.
+ * @param string $pill_text   Pill text colour.
+ * @param string $icon_size   Icon font-size, with its unit.
+ * @param string $icon_stroke Inline stroke declarations, or ''.
+ * @return string
+ */
+function hpts_css_rules( $icon_color, $pill_bg, $pill_text, $icon_size, $icon_stroke ) {
 	$css = '.hpts-block .hpts-list{list-style:none;margin:0;padding:0}'
 		// Centered title fallback; content-title--center handles HivePress themes.
 		. '.hpts-block__title{margin:0 0 1.25rem;text-align:center}'
 		// Fixed icon metrics so pills with and without icons match in height.
-		. '.hpts-block .hpts-icon{color:' . $icon_color . ';font-size:' . $icon_size . '%;line-height:1;flex:0 0 auto;' . $icon_stroke . '}'
+		. '.hpts-block .hpts-icon{color:' . $icon_color . ';font-size:' . $icon_size . ';line-height:1;flex:0 0 auto;' . $icon_stroke . '}'
 		// Card fallback: exact HivePress theme sidebar-widget values, applied
 		// only when the theme does not style .widget--sidebar itself.
 		. '.hpts-block--card{padding:2rem;border:1px solid rgba(7,36,86,.075);border-radius:3px;box-shadow:0 2px 4px 0 rgba(7,36,86,.075);background-color:#fff}'
@@ -1454,7 +1498,181 @@ function hpts_inline_css() {
 		. '.hpts-block--pills .hpts-item{display:inline-flex;align-items:center;gap:.5em;box-sizing:border-box;min-height:2.35em;padding:.45em .95em;border-radius:999px;background-color:' . $pill_bg . ';color:' . $pill_text . ';font-size:.85em;font-weight:500;line-height:1.35}'
 		. '.hpts-pills--stacked .hpts-item{width:100%}';
 
-	return '<style id="hpts-css">' . $css . '</style>';
+	return $css;
+}
+
+/*
+--------------------------------------------------------------------------
+Live preview.
+--------------------------------------------------------------------------
+*/
+
+/**
+ * Registers the preview as a settings section and moves it to the front of
+ * the tab, where the stylesheet lifts it into a column on the right at
+ * desktop widths.
+ *
+ * The same shape as Action Bar's and Account Menu Enhancer's preview: a
+ * section with no fields, drawn by a callback. HivePress renders the tab
+ * through do_settings_sections(), so a section is the one thing that can be
+ * placed among its own without touching its template.
+ *
+ * @return void
+ */
+function hpts_register_preview_section() {
+	global $pagenow;
+
+	// HivePress registers its settings on options.php as well, so that a save
+	// has the field list to validate against. Nothing is rendered there.
+	if ( 'admin.php' !== $pagenow ) {
+		return;
+	}
+
+	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+	if ( 'hp_settings' !== $page || ! hpts_is_settings_tab() ) {
+		return;
+	}
+
+	add_settings_section( 'hpts_preview', '', 'hpts_render_preview_section', 'hp_settings' );
+
+	if ( ! isset( $GLOBALS['wp_settings_sections']['hp_settings']['hpts_preview'] ) ) {
+		return;
+	}
+
+	$sections = $GLOBALS['wp_settings_sections']['hp_settings'];
+	$preview  = $sections['hpts_preview'];
+
+	unset( $sections['hpts_preview'] );
+
+	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Reordering our own entry in the settings section list, which is the documented way sections are held and has no setter.
+	$GLOBALS['wp_settings_sections']['hp_settings'] = array_merge( [ 'hpts_preview' => $preview ], $sections );
+}
+
+/**
+ * Prints the preview panel. The block itself is drawn by
+ * assets/js/admin-preview.js from the form's current values; this is the
+ * frame it is drawn into.
+ *
+ * @return void
+ */
+function hpts_render_preview_section() {
+	echo '<div class="hpts-preview">';
+
+	// The resize handle. A separator role with a value, so a screen reader can
+	// operate it with the arrow keys the script listens for; the pointer does
+	// the rest.
+	echo '<div class="hpts-preview__resizer" role="separator" aria-orientation="vertical" tabindex="0" aria-label="' . esc_attr__( 'Resize the preview: drag, or use the arrow keys. Double-click to reset.', 'hivepress-trust-signals' ) . '" title="' . esc_attr__( 'Drag to resize. Double-click to reset.', 'hivepress-trust-signals' ) . '"></div>';
+
+	echo '<div class="hpts-preview__inner">';
+	echo '<h2 class="hpts-preview__title">' . esc_html__( 'Live preview', 'hivepress-trust-signals' ) . '</h2>';
+
+	echo '<div class="hpts-preview__panel" data-panel="block">';
+	echo '<button type="button" class="hpts-preview__header" aria-expanded="true" aria-controls="hpts-preview-panel-block">';
+	echo '<span class="dashicons dashicons-arrow-up-alt2" aria-hidden="true"></span>';
+	echo '<span class="hpts-preview__panel-title">' . esc_html__( 'Sidebar block', 'hivepress-trust-signals' ) . '</span>';
+	echo '</button>';
+	echo '<div class="hpts-preview__body" id="hpts-preview-panel-block">';
+	echo '<div class="hpts-preview__stage"><div data-hpts-part="block"></div></div>';
+	echo '</div>';
+	echo '</div>';
+
+	echo '<p class="description hpts-preview__description">' . esc_html__( 'How the block will look in a sidebar with the settings on this page, following every change as you make it. The figures are examples, and a signal a vendor has no data for is left out on the site. Nothing is stored until you press Save Changes.', 'hivepress-trust-signals' ) . '</p>';
+	echo '</div></div>';
+}
+
+/**
+ * The example signals the preview draws, worded exactly as
+ * hpts_collect_signals() words the real ones, plus the standard icons and
+ * colours each blank field falls back to.
+ *
+ * @return array
+ */
+function hpts_preview_data() {
+	$since = date_i18n( 'M Y', strtotime( '-2 years' ) );
+
+	$signals = [
+		[
+			'key'   => 'verified',
+			'label' => __( 'Verified', 'hivepress-trust-signals' ),
+			'value' => __( 'Yes', 'hivepress-trust-signals' ),
+			'pill'  => __( 'Verified', 'hivepress-trust-signals' ),
+		],
+		[
+			'key'   => 'member_since',
+			'label' => __( 'Member since', 'hivepress-trust-signals' ),
+			'value' => $since,
+			/* translators: %s: month and year. */
+			'pill'  => sprintf( __( 'Member since %s', 'hivepress-trust-signals' ), $since ),
+		],
+		[
+			'key'   => 'listings_count',
+			'label' => __( 'Active listings', 'hivepress-trust-signals' ),
+			'value' => number_format_i18n( 12 ),
+			/* translators: %s: number of listings. */
+			'pill'  => sprintf( _n( '%s active listing', '%s active listings', 12, 'hivepress-trust-signals' ), number_format_i18n( 12 ) ),
+		],
+		[
+			'key'   => 'rating',
+			'label' => __( 'Rating', 'hivepress-trust-signals' ),
+			/* translators: 1: rating out of 5, 2: number of reviews. */
+			'value' => sprintf( _n( '%1$s / 5 (%2$s review)', '%1$s / 5 (%2$s reviews)', 23, 'hivepress-trust-signals' ), number_format_i18n( 4.8, 1 ), number_format_i18n( 23 ) ),
+			/* translators: 1: rating out of 5, 2: number of reviews. */
+			'pill'  => sprintf( _n( '%1$s / 5 (%2$s review)', '%1$s / 5 (%2$s reviews)', 23, 'hivepress-trust-signals' ), number_format_i18n( 4.8, 1 ), number_format_i18n( 23 ) ),
+		],
+		[
+			'key'   => 'favorites',
+			'label' => __( 'Favourites received', 'hivepress-trust-signals' ),
+			/* translators: %s: number of times. */
+			'value' => sprintf( _n( '%s time', '%s times', 57, 'hivepress-trust-signals' ), number_format_i18n( 57 ) ),
+			/* translators: %s: number of times. */
+			'pill'  => sprintf( _n( 'Favourited %s time', 'Favourited %s times', 57, 'hivepress-trust-signals' ), number_format_i18n( 57 ) ),
+		],
+		[
+			'key'   => 'completed_bookings',
+			'label' => __( 'Completed bookings', 'hivepress-trust-signals' ),
+			'value' => number_format_i18n( 41 ),
+			/* translators: %s: number of bookings. */
+			'pill'  => sprintf( _n( '%s completed booking', '%s completed bookings', 41, 'hivepress-trust-signals' ), number_format_i18n( 41 ) ),
+		],
+		[
+			'key'   => 'response_time',
+			'label' => __( 'Typically replies', 'hivepress-trust-signals' ),
+			'value' => __( 'within a few hours', 'hivepress-trust-signals' ),
+			/* translators: %s: response time wording, e.g. "within a few hours". */
+			'pill'  => sprintf( __( 'Replies %s', 'hivepress-trust-signals' ), __( 'within a few hours', 'hivepress-trust-signals' ) ),
+		],
+		[
+			'key'   => 'response_rate',
+			'label' => __( 'Response rate', 'hivepress-trust-signals' ),
+			'value' => '96%',
+			/* translators: %s: percentage. */
+			'pill'  => sprintf( __( '%s%% response rate', 'hivepress-trust-signals' ), 96 ),
+		],
+		[
+			'key'   => 'last_active',
+			'label' => __( 'Activity', 'hivepress-trust-signals' ),
+			'value' => __( 'Active today', 'hivepress-trust-signals' ),
+			'pill'  => __( 'Active today', 'hivepress-trust-signals' ),
+		],
+	];
+
+	return [
+		'signals' => $signals,
+		'icons'   => hpts_default_icons(),
+		'colours' => [
+			'icon'     => '#b5becf',
+			'pillBg'   => '#eaecf0',
+			'pillText' => '#4a5568',
+		],
+		'strokes' => [
+			'semibold' => '0.3px',
+			'bold'     => '0.5px',
+		],
+		'labels'  => [
+			'none' => __( 'No signals are ticked in the Signals section, so the block would not appear.', 'hivepress-trust-signals' ),
+		],
+	];
 }
 
 /*
