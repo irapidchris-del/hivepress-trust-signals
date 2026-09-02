@@ -4,7 +4,7 @@ Tags: hivepress, marketplace, trust, reviews, bookings
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.8.10
+Stable tag: 1.8.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,6 +25,13 @@ Translation-ready: all strings use the hivepress-trust-signals text domain, with
 Updates are delivered straight from the plugin's public GitHub repository: when a new release is published there, the update appears in Dashboard > Updates and on the Plugins screen just like any other plugin, and can be installed with one click.
 
 == Changelog ==
+
+= 1.8.11 =
+* Changed: the shared icon library is updated to the version that fixed two faults found in
+  Account Menu Enhancer 3.4.0 - a repeater row inheriting its neighbour's icon on save, and a
+  re-picked icon drawing the old glyph enlarged. Neither could happen on this extension's own
+  screens, and nothing here changes; it is released so that every combination of extensions carries
+  the corrected copy, whichever one a site happens to load it from.
 
 = 1.8.10 =
 * Changed: icons are now drawn directly into the page instead of being loaded as a font. A
