@@ -4,7 +4,7 @@ Tags: hivepress, marketplace, trust, reviews, bookings
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.8.13
+Stable tag: 1.8.14
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,6 +25,11 @@ Translation-ready: all strings use the hivepress-trust-signals text domain, with
 Updates are delivered straight from the plugin's public GitHub repository: when a new release is published there, the update appears in Dashboard > Updates and on the Plugins screen just like any other plugin, and can be installed with one click.
 
 == Changelog ==
+
+= 1.8.14 =
+* Fixed: updating two of these extensions one after the other could fail on the second with "up to date" until Check for updates was pressed again. WordPress rebuilds its update list after each update by asking wordpress.org first, and gives up on the whole list when that call is slow; the plugin now keeps its own update in the list regardless.
+* Changed: a release found more than an hour ago is refreshed in the background whenever the Plugins screen is opened, so the newest release is offered rather than an intermediate one.
+* New: a Check for updates bulk action on the Plugins screen, which checks every selected extension in one go, and the row that says Updating no longer shrinks on phones.
 
 = 1.8.13 =
 * Changed: on the settings tab the help icon now sits directly after each label, and its tooltip opens to the right at full width instead of being cut into a narrow strip to the left. The same placement is used across every extension in this family.
