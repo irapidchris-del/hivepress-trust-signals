@@ -4,7 +4,7 @@ Tags: hivepress, marketplace, trust, reviews, bookings
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.8.14
+Stable tag: 1.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,7 @@ Adds a configurable "Overview" block to HivePress listing and vendor sidebars, b
 
 Signals hide automatically when the relevant extension is inactive or there is not enough data - the block omits rather than estimates. Site admins see an HTML comment in the page source explaining exactly why any enabled signal is hidden.
 
-Configure under HivePress > Settings > Trust Signals: display locations, the block's sidebar position (set separately for listing and vendor pages), list-row or pill-chip style, card styling (border and shadow), optional Font Awesome icons (choosable per signal, including newer Font Awesome and brand icons, with size, weight and colour settings), custom colours, enabled signals, and the response-statistics thresholds (grace period, minimum rate to display, slowest response time to display, and minimum conversation sample).
+Configure under HivePress > Settings > Trust Signals: display locations, the block's sidebar position (set separately for listing and vendor pages), list-row or pill-chip style, card styling (border and shadow), optional Font Awesome icons (choosable per signal, including newer Font Awesome, brand and outline icons, with size, weight and colour settings), custom colours, enabled signals, and the response-statistics thresholds (grace period, minimum rate to display, slowest response time to display, and minimum conversation sample).
 
 All data stays in your WordPress database - nothing is sent externally. The optional last-active signal stores a single timestamp per user (updated on login, on sending a message, and at most hourly while browsing logged in); the plugin also keeps a per-vendor completed-bookings counter and short-lived cached statistics. Deleting the plugin removes all of this data.
 
@@ -25,6 +25,9 @@ Translation-ready: all strings use the hivepress-trust-signals text domain, with
 Updates are delivered straight from the plugin's public GitHub repository: when a new release is published there, the update appears in Dashboard > Updates and on the Plugins screen just like any other plugin, and can be installed with one click.
 
 == Changelog ==
+
+= 1.9.0 =
+* Added: each signal's icon dropdown also offers the outline version of each icon that has one, marked (outline) in the list. Icons already chosen keep their solid look.
 
 = 1.8.14 =
 * Fixed: updating two of these extensions one after the other could fail on the second with "up to date" until Check for updates was pressed again. WordPress rebuilds its update list after each update by asking wordpress.org first, and gives up on the whole list when that call is slow; the plugin now keeps its own update in the list regardless.

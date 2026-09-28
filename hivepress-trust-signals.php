@@ -3,7 +3,7 @@
  * Plugin Name: Trust Signals for HivePress
  * Plugin URI: https://github.com/irapidchris-del/hivepress-trust-signals
  * Description: Surfaces verifiable trust and activity data (response time, completed bookings, reviews, favourites and more) in a sidebar block on HivePress listing and vendor pages.
- * Version: 1.8.14
+ * Version: 1.9.0
  * Author: ChrisB @ HivePress Community
  * Author URI: https://community.hivepress.io/u/chrisb/summary
  * Update URI: https://github.com/irapidchris-del/hivepress-trust-signals
@@ -34,7 +34,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HPTS_VERSION', '1.8.14' );
+define( 'HPTS_VERSION', '1.9.0' );
 define( 'HPTS_CACHE_TTL', 12 * HOUR_IN_SECONDS );
 define( 'HPTS_MSG_ROW_LIMIT', 20000 );
 
@@ -551,7 +551,8 @@ function hpts_fa_brand_icons() {
 /**
  * Gets the admin-chosen icon for a signal, falling back to the standard one.
  * A stored empty value (the "Standard icon" choice) and anything that is not
- * a plain icon name both fall back, so the render path can trust the result.
+ * a plain icon name, or an outline value ("far fa-heart"), both fall back, so
+ * the render path can trust the result.
  *
  * @param string $key Signal key.
  * @return string
@@ -561,7 +562,7 @@ function hpts_signal_icon( $key ) {
 	$icon     = hpts_get_option( 'trust_signals_icon_' . $key, '' );
 	$icon     = is_string( $icon ) ? strtolower( trim( $icon ) ) : '';
 
-	if ( ! $icon || ! preg_match( '/^[a-z0-9-]+$/', $icon ) ) {
+	if ( ! $icon || ! preg_match( '/^(?:far fa-)?[a-z0-9-]+$/', $icon ) ) {
 		$icon = isset( $defaults[ $key ] ) ? $defaults[ $key ] : '';
 	}
 
@@ -573,12 +574,16 @@ function hpts_signal_icon( $key ) {
  * family, so it must say `fa-brands`; a Font Awesome 6/7 solid icon says
  * `fa-solid`, a class only the shared stylesheet defines; and everything else
  * keeps the `fas` class the Font Awesome 5 build bundled with HivePress core
- * styles on its own.
+ * styles on its own. An outline value keeps its style as `fa-regular`.
  *
- * @param string $icon Icon name.
+ * @param string $icon Icon name, or an outline value ("far fa-heart").
  * @return string
  */
 function hpts_icon_class( $icon ) {
+	if ( 0 === strpos( $icon, 'far fa-' ) ) {
+		return 'fa-regular fa-' . substr( $icon, 7 );
+	}
+
 	if ( in_array( $icon, hpts_fa_brand_icons(), true ) ) {
 		return 'fa-brands fa-' . $icon;
 	}
@@ -630,7 +635,7 @@ function hpts_icon_markup( $icon ) {
  * @return bool
  */
 function hpts_icon_needs_fontawesome( $icon ) {
-	return in_array( $icon, hpts_fa_brand_icons(), true ) || in_array( $icon, hpts_fa_extra_icons(), true );
+	return 0 === strpos( $icon, 'far fa-' ) || in_array( $icon, hpts_fa_brand_icons(), true ) || in_array( $icon, hpts_fa_extra_icons(), true );
 }
 
 /**
@@ -762,7 +767,7 @@ function hpts_register_settings( $settings ) {
 		$icon_fields[ 'trust_signals_icon_' . $signal_key ] = [
 			'label'       => $icon_labels[ $signal_key ],
 			/* translators: %s: the standard icon's name. */
-			'description' => sprintf( __( 'The icon beside this signal. Standard: %s. Brand icons are marked in the list.', 'hivepress-trust-signals' ), $default_icon ),
+			'description' => sprintf( __( 'The icon beside this signal. Standard: %s. Many icons also come in an outline version, marked (outline) in the list.', 'hivepress-trust-signals' ), $default_icon ),
 			'type'        => 'select',
 			'options'     => $icon_options,
 			'_parent'     => 'trust_signals_icons',
